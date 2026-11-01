@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Stego Jelly</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Stego Jelly">
@@ -20,22 +20,23 @@
   --mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,Menlo,monospace;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;overflow:hidden;background:var(--stage);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;background:var(--stage);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
 canvas#gl{position:fixed;inset:0;display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none}
 canvas#gl.dragging{cursor:grabbing}
 canvas#gl.orbiting{cursor:move}
-.title{position:fixed;z-index:2;left:16px;top:14px;margin:0;padding:5px 14px 8px;border-radius:8px;background:rgba(246,244,239,.9);box-shadow:0 2px 10px rgba(0,0,0,.16);font-family:var(--serif);font-weight:400;font-size:clamp(24px,2.6vw,36px);line-height:1;letter-spacing:-.01em;color:var(--ink);pointer-events:none;user-select:none}
+.title{position:fixed;z-index:2;left:calc(16px + env(safe-area-inset-left));top:calc(14px + env(safe-area-inset-top));margin:0;padding:5px 14px 8px;border-radius:8px;background:rgba(246,244,239,.9);box-shadow:0 2px 10px rgba(0,0,0,.16);font-family:var(--serif);font-weight:400;font-size:clamp(24px,2.6vw,36px);line-height:1;letter-spacing:-.01em;color:var(--ink);pointer-events:none;user-select:none}
 .title em{color:var(--accent);transition:color .4s}
 .fab{position:fixed;z-index:3;appearance:none;font:inherit;font-size:14px;font-weight:600;line-height:1;padding:10px 15px;border-radius:999px;border:1px solid rgba(28,27,24,.22);background:rgba(246,244,239,.92);color:var(--ink);cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.18);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .fab:hover{background:#fff}
 .fab:active{transform:translateY(1px)}
-#reset{top:16px;right:16px}
-#paneltoggle{right:16px;bottom:16px;display:inline-flex;align-items:center;gap:8px;padding:9px 13px;font-size:13px}
+#reset{top:calc(16px + env(safe-area-inset-top));right:calc(16px + env(safe-area-inset-right))}
+button{touch-action:manipulation}
+#paneltoggle{right:calc(16px + env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));display:inline-flex;align-items:center;gap:8px;padding:9px 13px;font-size:13px}
 #paneltoggle svg{width:15px;height:15px;flex:none}
 #paneltoggle[aria-expanded="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .fab:focus-visible{outline:2px solid #f6f4ef;outline-offset:2px}
-.panel{position:fixed;z-index:3;right:16px;bottom:64px;width:300px;max-width:calc(100vw - 32px);max-height:calc(100% - 130px);overflow:auto;background:rgba(238,235,228,.97);border:1px solid rgba(28,27,24,.2);border-radius:10px;padding:4px 16px 12px;box-shadow:0 12px 34px rgba(0,0,0,.3)}
+.panel{position:fixed;z-index:3;right:calc(16px + env(safe-area-inset-right));bottom:calc(64px + env(safe-area-inset-bottom));width:300px;max-width:calc(100vw - 32px);max-height:calc(100% - 130px);overflow:auto;background:rgba(238,235,228,.97);border:1px solid rgba(28,27,24,.2);border-radius:10px;padding:4px 16px 12px;box-shadow:0 12px 34px rgba(0,0,0,.3)}
 .panel[hidden]{display:none}
 .sec{border-top:1px solid var(--rule);padding:11px 0 12px}
 .sec:first-child{border-top:0}
@@ -66,7 +67,7 @@ button.act:active{transform:translateY(1px)}
 .fallback h2{font-family:var(--serif);font-weight:400;font-size:26px;margin:0}
 .fallback p{max-width:520px;margin:0;font-size:14px;line-height:1.5}
 .fallback .detail{font-family:var(--mono);font-size:11px;opacity:.75}
-@media (max-width:480px){ .title{left:12px;top:12px} #reset{right:12px;top:12px} #paneltoggle{right:12px;bottom:12px} .panel{right:12px;bottom:58px;max-width:calc(100vw - 24px)} }
+@media (max-width:480px){ .title{left:calc(12px + env(safe-area-inset-left));top:calc(12px + env(safe-area-inset-top))} #reset{right:calc(12px + env(safe-area-inset-right));top:calc(12px + env(safe-area-inset-top))} #paneltoggle{right:calc(12px + env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom))} .panel{right:calc(12px + env(safe-area-inset-right));bottom:calc(58px + env(safe-area-inset-bottom));max-width:calc(100vw - 24px)} }
 </style>
 </head>
 <body>
@@ -97,14 +98,14 @@ button.act:active{transform:translateY(1px)}
       <button class="tg" id="light" type="button" aria-pressed="false" title="Coarser simulation lattice for slower machines">Light lattice</button>
     </div>
   </div>
-  <p class="keys">Left drag on the jelly stretches it or carries a drop. Left drag on the table orbits. The wheel zooms, or twists what you are holding. Esc closes this panel.</p>
+  <p class="keys" id="keys">Left drag on the jelly stretches it or carries a drop. Left drag on the table orbits. The wheel zooms, or twists what you are holding. Esc closes this panel.</p>
   <p class="keys">Made by <a href="https://www.walker-robinson.com">Walker Robinson</a> with Claude. Adapted from <a href="https://x.com/vib3coded/status/2114674922802782355">Whale Jelly</a> by Vib3Coded.</p>
 </div>
 
 <div class="loading" id="loading">Casting the jelly</div>
 <div class="fallback" id="fallback">
-  <h2>This study needs WebGPU</h2>
-  <p id="fallbackmsg">Your browser did not provide a WebGPU device, so the live simulation cannot run here. A recent desktop Chrome or Edge should work. The still below is a frame captured from the live study.</p>
+  <h2>This study needs WebGPU or WebGL2</h2>
+  <p id="fallbackmsg">Your browser provided neither WebGPU nor WebGL2, so the live simulation cannot run here. Any recent Chrome, Edge, Firefox or Safari should work. The still below is a frame captured from the live study.</p>
   <p id="fallbackdetail" class="detail"></p>
   <img id="poster" alt="Still frame of the jelly Stegosaurus on a studio table" src="data:image/jpeg;base64,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gAAUhQAAAoIUAAAKCFAAAAAAKAAAAAAAAUgAoIUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAoAAgAAAAAAAAAAEAAAAAAABCkAAAAAQAAAAAAgAAAEAAAAQpAABAAAAAEAAAIZAhQkKQoQAACghQkAAFAAApCgAAAKQAUAAAAAKQAUAAAAAAAApABQQoAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAIUgAAAAAAAIAAAAAACAAAAAIUgAAACAAAAAIAAAIAAAQEAAAAJUpChAAAKAAkKQoAAAUEKAAAFBCgAABQQoAAAAABQQoAAAAAAAAAAAUEAFAAAAAAAAAAAAAAAAAAAAACAAUgAAAAAAAAAAAgAAAAAAAIBSAAAAAAIAAAAAAQAAACAAAAIUgAABAQAJACBAAAlAAEMgABQABQQoAAAUAACkASoAAFIAKAAAAAoAAAAIAAEqCFAAAIAAEgAAAACggAoIUACACgAAAAAAAAgApAAAAAAAAAAAAAAEAAAAAAAAAAEAAAAAABAAAAAEAAAAAQpAAAAEACAAgAAACAAACBIAAMgQoQoIUAAAKAABSFAAACghQkAAQoIUAAABSAJUAAAAAAAFAAQAAAAAkAAAAAAAAAAApAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAgAAAAAAIUgAAAACAAAAAIAAAAhSAAAEBAAABAAAAgACQEAQyKQoAAAUAAUEKAAAFAAAAAUABIAAKAAgAAApAEqAAAAAAACggAoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAABAAAAAAACAAAAAAAgAAAAAQAAAQAAAgAIAAAAgAAhSBIAQAAAhkAAKCFAFIUAAAKCFAFIAKAABSAJUABAUgAoAAAAAUgCVAAAAAAAAKQAUAgFAAAAAAAAAAAAAAAAAAAAAACAUgAAAAAAAAAAhSAAAAAAAAAQAAAAAIAAAAAgAAAACAAAAEIAABCkAAACAAJCABAAAlSkKEBSACgACghQBSFAAAAUhQAACVBChAAAkKQBCgAJAAEBSAJUABAAAkAAAAAAAAAAFBAEKCAJUEAFBAAAAAAAAAAAAAAAAAABAAAAAAACFIBSAAAAAIUgAAACFIAAAAhSAAAEBAAABAkAAQEAAAEAAECQAAZA/NXvNx/45xP5zJ9R7zcf+OcT+cyfUIfpYH5p95uP/HOJ/OZPqPeb2g+OcT+cyfUD9LFPzR7ze0Hx3ifzmT6j3n9oPjvE/nMn1A/S5T8z+8/tB8d4n85k+o95/aD47xP5zJ9QP0wD8z+8/tB8d4p85k+o95/aD47xT5zJ9QP0wU/M3vP7QfHeKfOZPqPef2g+O8U+cyfUD9Mg/M3vP7QfHeKfOZPqPef2g+O8U+cyfUD9NA/MvvP7QfHeKfOZPqPef2g+O8U+cyfUD9NA/MvvP7QfHeKfOZPqPef2g+O8U+cyfUD9Ng/MnvP7QfHeKfOZPqPef2g+O8U+cyfUD9Ng/MnvP7QfHeKfOZPqPef2h+O8U+cyfUD9NlPzH7z+0Px3inzmT6j3n9ofjvFPnMn1A/TgPzH7z+0Px3inzmT6j3o9ofjvFPnMn1A/TgPzH70e0Px3inzmT6l96PaH47xT5zJ9QP02D8x+9HtD8d4p85k+o96PaH47xT5zJ9QP06D8xe9HtD8d4p85k+pfej2h+O8U+cyfUD9OA/MfvR7Q/HuKfOZPqPej2h+PcU+cyfUD9OA/MfvR7Q/HuKfOZPqPej2h+O8U+cyfUD9OA/MfvR7Q/HuKfOZPqPej2h+PcU+cyfUD9OA/MfvR7Q/HuKfOZPqPej2h+PcU+cyfUD9OA/MfvR7Q/HuKfOZPqPej2h+PcU+cyfUD9OA/MfvR7Q/HuKfOZPqPej2h+PcU+cyfUD9OA/MfvR7Q/HuKfOZPqPej2h+PcU+cyfUD9OA/MfvR7Q/HuKfOZPqPej2h+PcU+cyfUD9OA/MfvR7Q/HuKfOZPqPej2h+PcU+cyfUD9OA/MfvR7Q/HuKfOZPqPej2h+PcU+cyfUD9OA/MfvR7Q/HuKfOZPqPej2h+O8U+cyfUD9OA/MfvR7Q/HuKfOZPqPej2h+PcU+cyfUD9OA/MfvR7Q/HeKfOZPqPej2h+O8U+cyfUD9OEPzH70e0Px3inzmT6j3o9ofjvFPnMn1A/TgPzH70e0Px3inzmT6j3o9ofjvFPnMn1A/TgPzH70e0Px3inzmT6j3o9ofjvFPnMn1A/TYPzJ7z+0Px3inzmT6j3n9oPjvFPnMn1A/ThD8ye8/tD8d4p85k+o96PaH47xT5zJ9QP02D8ye8/tB8d4p85k+o95/aD47xT5zJ9QP02Q/MvvP7QfHeKfOZPqPef2g+O8U+cyfUD9NA/MvvP7QfHeKfOZPqPef2g+O8U+cyfUD9NEPzN7z+0Hx3inzmT6j3n9oPjvFPnMn1A/TIPzN7z+0Hx3inzmT6j3n9oPjvFPnMn1A/TJD8z+8/tB8d4p85k+o95/aD47xT5zJ9QP0wD8z+8/tB8d4p85k+o95/aD47xT5zJ9QP0wD8z+8/tB8d4p85k+o95/aD47xP5zJ9QP0uD80e8/tB8d4n85k+o95vaD47xP5zJ9QP0sD80+83tB8c4n85k+o95vaD45xP5zJ9QP0sQ/NXvNx/45xP5zJ9R7ze0HxzifzmT6gfpUH5q95uP/ABzifzmT6j3m4/8AHOJ/OZPqB+lAfmr3m4/8c4n85k+o95uP/HOJ/OZPqB+lSH5r95uP/HOJ/OZPqPebj/xzifzmT6gfpQH5r95uP/HOJ/N5PqAP/9k=">
 </div>
@@ -117,7 +118,11 @@ button.act:active{transform:translateY(1px)}
 // ================================================================
 const CM_PER_U = 16;            // 1 scene unit = 16 cm
 const GRAV = 9.81 * 100 / CM_PER_U; // u/s^2
-const SUBSTEPS = 10;
+let SUBSTEPS = 10;               // phone mode may lower this if frames stay slow
+// Phone mode: touch-first or small screens (or ?quality=phone) start lighter: light lattice, coarser rest grid, lower DPR cap, smaller shadow maps
+const QS = new URLSearchParams(location.search);
+const PHONE = QS.get('quality')==='phone' || (QS.get('quality')!=='full' && ((window.matchMedia && matchMedia('(pointer: coarse)').matches) || Math.min(screen.width,screen.height)<600));
+const QUAL = { phone:PHONE, dpr:PHONE?1.5:2, grid:PHONE?0.018:0.0135 };
 const HZ = 60;
 const DENSITY_G_CM3 = 1.05;     // assumed jelly density (mass is not shown on the page)
 const LATTICE_H = { fine: 0.066, light: 0.09 };
@@ -429,7 +434,7 @@ function grad(fn,px,py,pz,e=0.0015){ return [fn(px+e,py,pz)-fn(px-e,py,pz), fn(p
 // ================================================================
 //  Surface nets on a fine grid, with Newton projection
 // ================================================================
-const GRID={s:0.0135};
+const GRID={s:QUAL.grid};
 function setGrid(g){ GRID.ox=g.ox; GRID.oy=g.oy; GRID.oz=g.oz; GRID.nx=Math.ceil(g.lx/GRID.s)+1; GRID.ny=Math.ceil(g.ly/GRID.s)+1; GRID.nz=Math.ceil(g.lz/GRID.s)+1; }
 let gridVals=null, gridMilk=null;
 function sampleGrid(){
@@ -557,7 +562,7 @@ function buildSim(h){
 function inv3(m){ const [a,b,c,d,e,f,g,h,i]=m; const A=e*i-f*h, B=-(d*i-f*g), C=d*h-e*g; const det=a*A+b*B+c*C; const id=1/det;
   return [A*id, -(b*i-c*h)*id, (b*f-c*e)*id, B*id, (a*i-c*g)*id, -(a*f-c*d)*id, C*id, -(a*h-b*g)*id, (a*e-b*d)*id]; }
 
-const UI={firm:0.5, damp:0.4, slow:false, mesh:false, paused:false, colour:0, light:false, species:0};
+const UI={firm:0.5, damp:0.4, slow:false, mesh:false, paused:false, colour:0, light:PHONE, species:0};
 function applyMaterial(){
   if(!S) return; const f=UI.firm;
   const body=0.012+0.13*f*f+0.03*f;   // per-substep shape matching stiffness, clear body jelly (softest)
@@ -1091,7 +1096,7 @@ let MESH=null, MILK=null, EYES=[], BUBBLES=[], MARK={};
 let busy=true; // true while a specimen is being built; the loop and the pointer handlers stand still
 
 const cam={yaw:0.72, pitch:0.32, dist:3.7, target:[0.05,0.22,0.05], fov:30*Math.PI/180};
-let dev=null, ctx=null, fmt=null, R={};
+let dev=null, ctx=null, fmt=null, R={}, RND=null; // RND: the active renderer (webgpu or webgl2)
 
 // ---------- building the specimen ----------
 const CACHE={}; // per species: rest SDF grids, surfaces, eyes, bubbles, markers (the lattice is rebuilt each time)
@@ -1135,7 +1140,7 @@ function rebuildLattice(){
   STATS.latticeMs=performance.now()-t0; STATS.badEmbed=MESH.emb.bad+MILK.emb.bad;
   drops=[]; GRAB.active=false;
   computeRenderData();
-  if(dev) uploadMeshes();
+  if(RND) RND.upload();
 }
 
 // ================================================================
@@ -1148,7 +1153,7 @@ function icosphere(sub){
     const NF=[]; for(const [a,b,c] of F){ const ab=mid(a,b),bc=mid(b,c),ca=mid(c,a); NF.push([a,ab,ca],[b,bc,ab],[c,ca,bc],[ab,bc,ca]); } F=NF; }
   return {pos:new Float32Array(V.flat()), idx:new Uint32Array(F.flat())};
 }
-const SHADOW_SIZE=2048, AO_SIZE=512, INST_MAX=2+12+MAX_DROPS;
+const SHADOW_SIZE=PHONE?1024:2048, AO_SIZE=PHONE?256:512, INST_MAX=2+12+MAX_DROPS;
 async function initGPU(){
   if(!('gpu' in navigator)) throw new Error('navigator.gpu is not available in this browser.');
   const adapter=await navigator.gpu.requestAdapter({powerPreference:'high-performance'});
@@ -1156,10 +1161,11 @@ async function initGPU(){
   dev=await adapter.requestDevice();
   dev.lost.then(info=>{ console.error('device lost',info); if(info&&info.reason!=='destroyed') showFallback('The GPU device was lost: '+(info.message||info.reason||'unknown reason')); });
   STATS.adapter=(adapter.info&&(adapter.info.vendor+' '+adapter.info.architecture).trim())||'unknown';
-  ctx=canvas.getContext('webgpu'); fmt=navigator.gpu.getPreferredCanvasFormat(); ctx.configure({device:dev,format:fmt,alphaMode:'opaque'});
+  fmt=navigator.gpu.getPreferredCanvasFormat();
   const mod=dev.createShaderModule({code:WGSL}); const toneMod=dev.createShaderModule({code:TONE_WGSL});
   const info=await mod.getCompilationInfo(); for(const m of info.messages){ if(m.type==='error') throw new Error('WGSL: '+m.message+' line '+m.lineNum); }
   const info2=await toneMod.getCompilationInfo(); for(const m of info2.messages){ if(m.type==='error') throw new Error('WGSL tone: '+m.message+' line '+m.lineNum); }
+  dev.pushErrorScope('validation'); dev.pushErrorScope('out-of-memory');
   const VF=GPUShaderStage.VERTEX|GPUShaderStage.FRAGMENT;
   R.bgl0=dev.createBindGroupLayout({entries:[
     {binding:0,visibility:VF,buffer:{type:'uniform'}},{binding:1,visibility:VF,buffer:{type:'read-only-storage'}},{binding:2,visibility:VF,buffer:{type:'read-only-storage'}},
@@ -1203,12 +1209,20 @@ async function initGPU(){
   R.aoC=tex(AO_SIZE,AO_SIZE,'rgba16float',RA|TB); R.aoD=tex(AO_SIZE,AO_SIZE,'depth32float',RA);
   R.samp=dev.createSampler({magFilter:'linear',minFilter:'linear',addressModeU:'clamp-to-edge',addressModeV:'clamp-to-edge'});
   R.bg1o=dev.createBindGroup({layout:R.bgl1o,entries:[{binding:0,resource:R.shF.createView()},{binding:1,resource:R.shB.createView()},{binding:2,resource:R.shM.createView()},{binding:3,resource:R.aoC.createView()},{binding:4,resource:R.samp}]});
+  const oom=await dev.popErrorScope(), val=await dev.popErrorScope();
+  if(val||oom){ const e=val||oom; try{ dev.destroy(); }catch(x){} dev=null; throw new Error('WebGPU setup failed: '+(e.message||e)); }
+  dev.addEventListener('uncapturederror',ev=>console.error('WebGPU error:',ev.error&&ev.error.message));
+  ctx=canvas.getContext('webgpu'); if(!ctx) throw new Error('No WebGPU canvas context.'); ctx.configure({device:dev,format:fmt,alphaMode:'opaque'});
   uploadMeshes();
 }
+function skinVertexData(M){ // interleaved skin vertex: rest position, rest normal, 4 node ids, 4 weights (56 bytes)
+  const n=M.pos.length/3; const buf=new ArrayBuffer(n*56); const f=new Float32Array(buf), u=new Uint32Array(buf);
+  for(let v=0;v<n;v++){ const o=v*14; f[o]=M.pos[v*3];f[o+1]=M.pos[v*3+1];f[o+2]=M.pos[v*3+2]; f[o+3]=M.nrm[v*3];f[o+4]=M.nrm[v*3+1];f[o+5]=M.nrm[v*3+2];
+    for(let q=0;q<4;q++){ u[o+6+q]=M.emb.idx[v*4+q]; f[o+10+q]=M.emb.wts[v*4+q]; } }
+  return buf;
+}
 function uploadMeshes(){
-  const mkSkin=(M)=>{ const n=M.pos.length/3; const buf=new ArrayBuffer(n*56); const f=new Float32Array(buf), u=new Uint32Array(buf);
-    for(let v=0;v<n;v++){ const o=v*14; f[o]=M.pos[v*3];f[o+1]=M.pos[v*3+1];f[o+2]=M.pos[v*3+2]; f[o+3]=M.nrm[v*3];f[o+4]=M.nrm[v*3+1];f[o+5]=M.nrm[v*3+2];
-      for(let q=0;q<4;q++){ u[o+6+q]=M.emb.idx[v*4+q]; f[o+10+q]=M.emb.wts[v*4+q]; } }
+  const mkSkin=(M)=>{ const buf=skinVertexData(M);
     const vb=dev.createBuffer({size:buf.byteLength,usage:GPUBufferUsage.VERTEX|GPUBufferUsage.COPY_DST}); dev.queue.writeBuffer(vb,0,buf);
     const ib=dev.createBuffer({size:M.idx.byteLength,usage:GPUBufferUsage.INDEX|GPUBufferUsage.COPY_DST}); dev.queue.writeBuffer(ib,0,M.idx);
     return {vb,ib,n:M.idx.length}; };
@@ -1222,7 +1236,7 @@ function uploadMeshes(){
   R.bg0=dev.createBindGroup({layout:R.bgl0,entries:[{binding:0,resource:{buffer:R.ubo}},{binding:1,resource:{buffer:R.nodePos}},{binding:2,resource:{buffer:R.nodeCof}},{binding:3,resource:{buffer:R.inst}},{binding:4,resource:{buffer:R.edgeBuf}},{binding:5,resource:{buffer:R.spineUbo}}]});
 }
 function ensureTargets(){
-  const dpr=Math.min(window.devicePixelRatio||1,2); const w=Math.max(2,Math.round(canvas.clientWidth*dpr)), h=Math.max(2,Math.round(canvas.clientHeight*dpr));
+  const dpr=Math.min(window.devicePixelRatio||1,QUAL.dpr); const w=Math.max(2,Math.round(canvas.clientWidth*dpr)), h=Math.max(2,Math.round(canvas.clientHeight*dpr));
   if(R.W===w&&R.H===h) return; R.W=w; R.H=h; canvas.width=w; canvas.height=h;
   for(const k of ['opC','opL','opD','backC','backD','fin']) if(R[k]) R[k].destroy();
   const RA=GPUTextureUsage.RENDER_ATTACHMENT, TB=GPUTextureUsage.TEXTURE_BINDING, CS=GPUTextureUsage.COPY_SRC, CD=GPUTextureUsage.COPY_DST;
@@ -1237,14 +1251,14 @@ function ensureTargets(){
 const LIGHT_DIR=norm3([-0.50,1.0,-0.38]);
 function camState(){
   const asp=R.W/R.H; const hf=2*Math.atan(Math.tan(cam.fov/2)*asp);
-  const fit=Math.max(cam.dist, 1.12/Math.tan(Math.min(hf,cam.fov*1.6)/2));
+  const fit=Math.max(cam.dist, 1.24/Math.tan(Math.min(hf,cam.fov*1.6)/2)); // portrait only (used when the aspect is under 1)
   const d=asp<1? fit : cam.dist;
   const cp=Math.cos(cam.pitch); const eye=[cam.target[0]+d*cp*Math.sin(cam.yaw), cam.target[1]+d*Math.sin(cam.pitch), cam.target[2]+d*cp*Math.cos(cam.yaw)];
   const view=M4.lookAt(eye,cam.target,[0,1,0]); const proj=M4.persp(cam.fov,asp,0.05,60); const vp=M4.mul(proj,view);
   return {eye,view,proj,vp,ivp:M4.inv(vp),asp};
 }
 let CAM=null;
-function writeUniforms(){
+function buildUniforms(){
   CAM=camState(); const C=COLOURWAYS[UI.colour];
   const Lb=SPEC.light, lt=Lb.t; const le=[lt[0]+LIGHT_DIR[0]*4,lt[1]+LIGHT_DIR[1]*4,lt[2]+LIGHT_DIR[2]*4];
   const lview=M4.lookAt(le,lt,[0,1,0]); const lproj=M4.ortho(-Lb.hw,Lb.hw,-Lb.hh,Lb.hh,0.5,8.0); const lvp=M4.mul(lproj,lview);
@@ -1254,16 +1268,22 @@ function writeUniforms(){
   u.set([...CAM.eye,performance.now()/1000],64); u.set([...LIGHT_DIR,3.1],68); u.set([...sig,7.5],72); u.set([...C.tint,1.0],76);
   u.set([...C.milk,0.32],80); u.set([R.W,R.H,1/R.W,1/R.H],84); u.set([SHADOW_SIZE,AO_SIZE,0.62,0.33],88);
   const T=SPEC.gpuTable; u.set([SPEC.shader,SPEC.mouth[0],T[3],T[7]-T[3]],92); u.set([SPEC.mouth[1],MARK.snoutX||0,0,0],96);
-  dev.queue.writeBuffer(R.ubo,0,u);
+  return u;
+}
+function writeUniforms(){
+  const u=buildUniforms(); dev.queue.writeBuffer(R.ubo,0,u);
   dev.queue.writeBuffer(R.toneUbo,0,new Float32Array([0.95,0,R.W,R.H]));
 }
-function writeInstances(){
+function fillInstances(){
   const D=R.instData; D.fill(0); let n=0;
   const put=(p,r,q,kind)=>{ const o=n*12; D[o]=p[0];D[o+1]=p[1];D[o+2]=p[2];D[o+3]=r; D[o+4]=q[0];D[o+5]=q[1];D[o+6]=q[2];D[o+7]=q[3]; D[o+8]=kind; n++; };
   for(const e of EYES) put(evalEmbed(e.E),e.r,[0,0,0,1],1);
   R.nEyes=n; for(const b of BUBBLES) put(evalEmbed(b.E),b.r,[0,0,0,1],3); R.nBub=n-R.nEyes;
   R.dropStart=n; for(const d of drops) put(d.x,d.r,d.q,2); R.nDrops=n-R.dropStart;
-  dev.queue.writeBuffer(R.inst,0,D.buffer,0,n*48);
+  return n;
+}
+function writeInstances(){
+  const n=fillInstances(); dev.queue.writeBuffer(R.inst,0,R.instData.buffer,0,n*48);
 }
 function render(){
   ensureTargets(); writeUniforms();
@@ -1306,6 +1326,365 @@ function render(){
 }
 
 // ================================================================
+//  WebGL2 fallback renderer (same scene, plainer light: 6 passes, no milky-layer light map,
+//  no float render targets, relief from screen-space derivatives)
+// ================================================================
+const GLSL_HEAD = `#version 300 es
+precision highp float; precision highp int; precision highp sampler2D;
+layout(std140) uniform Globals {
+  mat4 viewProj; mat4 view; mat4 lightVP; mat4 aoVP;
+  vec4 cam; vec4 light; vec4 sigma; vec4 tint; vec4 milk; vec4 screen; vec4 misc; vec4 spec; vec4 spec2;
+} G;
+layout(std140) uniform Spine { vec4 spine[64]; };
+ivec2 tc(int i) { return ivec2(i & 1023, i >> 10); }
+`;
+const GLSL_VS = `
+uniform sampler2D nodePos; uniform sampler2D nodeCof;
+out vec3 vWp; out vec3 vN; out vec3 vRp; out float vLin; flat out float vKind;
+float linDepth(vec3 wp) { return -(G.view * vec4(wp, 1.0)).z; }
+vec3 qrot(vec4 q, vec3 v) { vec3 t = 2.0 * cross(q.xyz, v); return v + q.w * t + cross(q.xyz, t); }
+vec4 place(vec3 p) {
+#if defined(LIGHT)
+  return G.lightVP * vec4(p, 1.0);
+#elif defined(AO)
+  return G.aoVP * vec4(p, 1.0);
+#else
+  return G.viewProj * vec4(p, 1.0);
+#endif
+}
+#if defined(SKIN)
+layout(location=0) in vec3 aRp; layout(location=1) in vec3 aRn; layout(location=2) in uvec4 aIdx; layout(location=3) in vec4 aW;
+void node(uint u, float w, inout vec3 p, inout vec3 n) {
+  int id = int(u); p += texelFetch(nodePos, tc(id), 0).xyz * w;
+#if !defined(LIGHT) && !defined(AO) && !defined(LIGHT_NONE)
+  int c = id * 3; n += (texelFetch(nodeCof, tc(c), 0).xyz * aRn.x + texelFetch(nodeCof, tc(c + 1), 0).xyz * aRn.y + texelFetch(nodeCof, tc(c + 2), 0).xyz * aRn.z) * w;
+#endif
+}
+void main() {
+  vec3 p = vec3(0.0); vec3 n = vec3(0.0);
+  node(aIdx.x, aW.x, p, n); node(aIdx.y, aW.y, p, n); node(aIdx.z, aW.z, p, n); node(aIdx.w, aW.w, p, n);
+  vWp = p; vN = normalize(n + vec3(0.0, 1e-7, 0.0)); vRp = aRp; vKind = 0.0; vLin = linDepth(p); gl_Position = place(p);
+}
+#elif defined(SPHERE)
+layout(location=0) in vec3 aP; layout(location=4) in vec4 iPr; layout(location=5) in vec4 iQ; layout(location=6) in vec4 iK;
+void main() { vec3 wp = iPr.xyz + qrot(iQ, aP) * iPr.w; vWp = wp; vN = qrot(iQ, aP); vRp = aP; vKind = iK.x; vLin = linDepth(wp); gl_Position = place(wp); }
+#elif defined(FLOOR)
+void main() {
+  vec2 c[6] = vec2[6](vec2(-1.0,-1.0), vec2(1.0,-1.0), vec2(1.0,1.0), vec2(-1.0,-1.0), vec2(1.0,1.0), vec2(-1.0,1.0));
+  vec2 xz = c[gl_VertexID] * 16.0; vec3 wp = vec3(xz.x, 0.0, xz.y);
+  vWp = wp; vN = vec3(0.0, 1.0, 0.0); vRp = wp; vKind = 0.0; vLin = linDepth(wp); gl_Position = G.viewProj * vec4(wp, 1.0);
+}
+#elif defined(QUAD)
+void main() { vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); vWp = vec3(0.0); vN = vWp; vRp = vWp; vKind = 0.0; vLin = 0.0; gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }
+#elif defined(LINE)
+void main() { vec3 p = texelFetch(nodePos, tc(gl_VertexID), 0).xyz; vWp = p; vN = vec3(0.0); vRp = p; vKind = 0.0; vLin = 0.0; gl_Position = G.viewProj * vec4(p, 1.0); }
+#endif
+`;
+const GLSL_FS = `
+in vec3 vWp; in vec3 vN; in vec3 vRp; in float vLin; flat in float vKind;
+uniform sampler2D shF; uniform sampler2D shB; uniform sampler2D aoTex; uniform sampler2D opC; uniform sampler2D opD; uniform sampler2D backD;
+#if !defined(DEPTH)
+layout(location=0) out vec4 outC;
+#endif
+const float PI = 3.14159265;
+const vec2 POISSON[16] = vec2[16](
+  vec2(-0.94201624, -0.39906216), vec2(0.94558609, -0.76890725), vec2(-0.09418410, -0.92938870), vec2(0.34495938, 0.29387760),
+  vec2(-0.91588581, 0.45771432), vec2(-0.81544232, -0.87912464), vec2(-0.38277543, 0.27676845), vec2(0.97484398, 0.75648379),
+  vec2(0.44323325, -0.97511554), vec2(0.53742981, -0.47373420), vec2(-0.26496911, -0.41893023), vec2(0.79197514, 0.19090188),
+  vec2(-0.24188840, 0.99706507), vec2(-0.81409955, 0.91437590), vec2(0.19984126, 0.78641367), vec2(0.14383161, -0.14100790));
+// opaque image is stored in RGBA8 with a Reinhard-style encoding so it keeps some HDR range without float targets
+vec3 enc(vec3 c) { c = max(c, vec3(0.0)); return c / (1.0 + c); }
+vec3 dec(vec3 e) { e = min(e, vec3(0.996)); return e / (1.0 - e); }
+// the projection writes WebGPU-style clip z in [0, 1]; GL stores 0.5 z + 0.5
+float lin(float d) { float z = d * 2.0 - 1.0; float n = 0.05; float f = 60.0; float A = f / (n - f); float B = n * f / (n - f); return B / (z + A); }
+float ign(vec2 p) { return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
+float ldt(sampler2D t, vec2 uv) { int s = int(G.misc.x); ivec2 ip = clamp(ivec2(uv * G.misc.x), ivec2(0), ivec2(s - 1)); return texelFetch(t, ip, 0).r * 2.0 - 1.0; }
+vec3 lightCoord(vec3 wp) { vec4 c = G.lightVP * vec4(wp, 1.0); return vec3(c.x * 0.5 + 0.5, c.y * 0.5 + 0.5, c.z); }
+vec3 transAt(vec2 uv, float zr) {
+  float bias = 0.0016; float f = ldt(shF, uv);
+  if (f >= zr - bias) { return vec3(1.0); }
+  float b = ldt(shB, uv); float thick = max(min(b, zr) - f, 0.0) * G.sigma.w;
+  return exp(-G.sigma.xyz * thick) * mix(vec3(1.0), G.milk.xyz, 0.25) * 0.8;
+}
+vec3 pcf(vec3 wp, vec2 pix, float r) {
+  vec3 lc = lightCoord(wp); float texel = 1.0 / G.misc.x; float ang = ign(pix) * 6.2831853; float cs = cos(ang); float sn = sin(ang);
+  vec3 acc = vec3(0.0);
+  for (int i = 0; i < 8; i++) { vec2 o0 = POISSON[i * 2]; vec2 o = vec2(o0.x * cs - o0.y * sn, o0.x * sn + o0.y * cs) * r * texel; acc += transAt(lc.xy + o, lc.z); }
+  return acc / 8.0;
+}
+float softbox(vec3 d, vec3 c, vec2 sz) {
+  float z = dot(d, c); if (z <= 0.05) { return 0.0; }
+  vec3 r = cross(c, vec3(0.0, 1.0, 0.0)); if (length(r) < 0.01) { r = vec3(1.0, 0.0, 0.0); } r = normalize(r);
+  vec3 u = cross(r, c); float x = dot(d, r) / z; float y = dot(d, u) / z;
+  return (1.0 - smoothstep(sz.x * 0.7, sz.x, abs(x))) * (1.0 - smoothstep(sz.y * 0.7, sz.y, abs(y)));
+}
+vec3 env(vec3 d) {
+  vec3 c = mix(vec3(0.42, 0.41, 0.39), vec3(0.30, 0.295, 0.285), smoothstep(-0.25, 0.15, d.y));
+  c = mix(c, vec3(0.10, 0.098, 0.095), smoothstep(0.15, 0.9, d.y));
+  c += vec3(1.0, 0.97, 0.93) * 5.5 * softbox(d, G.light.xyz, vec2(0.55, 0.38));
+  c += vec3(0.92, 0.96, 1.0) * 2.4 * softbox(d, normalize(vec3(0.85, 0.30, 0.75)), vec2(0.10, 0.75));
+  c += vec3(1.0) * 1.2 * softbox(d, normalize(vec3(-0.15, 1.0, 0.3)), vec2(0.45, 0.45));
+  return c;
+}
+float ggx(vec3 N, vec3 V, vec3 L, float rough) {
+  vec3 H = normalize(V + L); float ndh = max(dot(N, H), 0.0); float ndl = max(dot(N, L), 0.0); float ndv = max(dot(N, V), 1e-3);
+  float a = rough * rough; float a2 = a * a; float dd = ndh * ndh * (a2 - 1.0) + 1.0; float D = a2 / (PI * dd * dd);
+  float k = (rough + 1.0) * (rough + 1.0) / 8.0; float Gs = (ndv / (ndv * (1.0 - k) + k)) * (ndl / (ndl * (1.0 - k) + k));
+  return D * Gs / (4.0 * ndv * ndl + 1e-4) * ndl;
+}
+float schlick(float f0, float c) { return f0 + (1.0 - f0) * pow(1.0 - clamp(c, 0.0, 1.0), 5.0); }
+vec3 spineAt(float x) { float f = clamp((x - G.spec.z) / G.spec.w, 0.0, 62.999); int i = int(floor(f)); float t = f - floor(f); return mix(spine[i].xyz, spine[i + 1].xyz, t); }
+vec2 hash2(vec2 p) { vec2 q = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3))); return fract(sin(q) * 43758.5453); }
+float voronoi(vec2 x) {
+  vec2 n = floor(x); vec2 f = fract(x); float md = 8.0;
+  for (int j = -1; j <= 1; j++) { for (int i = -1; i <= 1; i++) { vec2 g = vec2(float(i), float(j)); vec2 o = 0.2 + 0.6 * hash2(n + g); vec2 r = g + o - f; md = min(md, dot(r, r)); } }
+  return sqrt(md);
+}
+vec2 reliefStego(vec3 p) {
+  vec3 s = spineAt(p.x); float yc = s.x; float a = max(s.y, 0.01); float b = max(s.z, 0.01);
+  float ry = (p.y - yc) / b; float rz = abs(p.z) / a; float h = 0.0; float dark = 0.0;
+  float tm = smoothstep(0.44, 0.54, p.x) * (1.0 - smoothstep(0.72, 0.80, p.x)) * (1.0 - smoothstep(-0.35, 0.05, ry)) * smoothstep(0.004, 0.03, p.y);
+  h += tm * (0.5 + 0.5 * sin(p.x * 190.0 + sin(p.z * 40.0) * 1.2)) * 0.9;
+  float mm = smoothstep(0.71, 0.77, p.x);
+  float g = exp(-pow((p.y - (s.x - 0.28 * s.z)) / 0.0058, 2.0)) * mm * smoothstep(0.15, 0.45, rz + smoothstep(0.93, 0.99, p.x));
+  h -= g * 1.6; dark = g;
+  float sm = smoothstep(-0.62, -0.45, p.x) * (1.0 - smoothstep(0.64, 0.72, p.x)) * smoothstep(0.45, 0.8, rz) * smoothstep(-0.65, -0.3, ry) * (1.0 - smoothstep(0.45, 0.8, ry));
+  if (sm > 0.001) { float vv = voronoi(vec2(p.x * 17.0 + sign(p.z) * 3.1, p.y * 19.0)); float dome = 1.0 - smoothstep(0.0, 0.5, vv); h += sm * dome * dome * 0.45; }
+  float km = smoothstep(-0.42, -0.52, p.x) * smoothstep(-1.06, -0.98, p.x);
+  if (km > 0.001) { float fx = fract(p.x / 0.062) - 0.5; float kz = rz - 0.55; float ky = ry - 0.42; h += km * exp(-(fx * fx) / 0.018 - kz * kz / 0.05 - ky * ky / 0.09) * 1.1; }
+  return vec2(h, dark);
+}
+vec2 reliefGeneric(vec3 p) {
+  vec3 s = spineAt(p.x); float a = max(s.y, 0.01); float b = max(s.z, 0.01);
+  float ry = (p.y - s.x) / b; float rz = abs(p.z) / a; float h = 0.0;
+  float hx0 = G.spec2.x; float snx = G.spec2.y;
+  float mm = smoothstep(hx0, hx0 + 0.05, p.x);
+  float g = exp(-pow((p.y - G.spec.y) / 0.0050, 2.0)) * mm * smoothstep(0.15, 0.45, rz + smoothstep(snx - 0.06, snx, p.x));
+  h -= g * 1.5;
+  float sk = (1.0 - smoothstep(hx0 - 0.10, hx0 - 0.02, p.x)) * smoothstep(0.02, 0.07, p.y) * smoothstep(0.25, 0.65, rz + max(ry, 0.0));
+  if (sk > 0.001) { float vv = voronoi(vec2(p.x * 26.0 + sign(p.z) * 3.1 + p.z * 6.0, p.y * 28.0 + p.z * 11.0)); float dome = 1.0 - smoothstep(0.0, 0.5, vv); h += sk * dome * dome * 0.32; }
+  return vec2(h, g);
+}
+vec2 relief(vec3 p) { if (G.spec.x < 0.5) { return reliefStego(p); } return reliefGeneric(p); }
+vec3 neutral(vec3 c0) {
+  vec3 c = c0; float start = 0.8 - 0.04; float desat = 0.15;
+  float x = min(c.r, min(c.g, c.b)); float off = x < 0.08 ? x - 6.25 * x * x : 0.04; c -= off;
+  float peak = max(c.r, max(c.g, c.b)); if (peak < start) { return c; }
+  float d = 1.0 - start; float np = 1.0 - d * d / (peak + d - start); c *= np / peak;
+  float g = 1.0 - 1.0 / (desat * (peak - np) + 1.0); return mix(c, vec3(np), g);
+}
+vec3 srgb(vec3 c) { return mix(1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, c * 12.92, vec3(lessThanEqual(c, vec3(0.0031308)))); }
+vec4 finalize(vec3 c) {
+  c = neutral(max(c * 0.95, vec3(0.0)));
+  vec2 uv = gl_FragCoord.xy * G.screen.zw; c *= 1.0 - 0.22 * pow(length((uv - 0.5) * vec2(1.0, 0.8)) * 1.25, 2.4);
+  float n = ign(gl_FragCoord.xy);
+  return vec4(srgb(clamp(c, vec3(0.0), vec3(1.0))) + (n - 0.5) / 255.0, 1.0);
+}
+#if defined(DEPTH)
+void main() {}
+#elif defined(AOH)
+void main() { outC = vec4(clamp(vWp.y * 4.0, 0.0, 1.0), 0.0, 0.0, 1.0); }
+#elif defined(FLOORF)
+void main() {
+  vec3 wp = vWp; vec3 L = G.light.xyz; vec3 V = normalize(G.cam.xyz - wp);
+  vec3 T = pcf(wp + vec3(0.0, 0.006, 0.0), gl_FragCoord.xy, 6.0);
+  float occ = 0.0;
+  for (int i = 0; i < 6; i++) { vec2 o = POISSON[i * 2] * 0.075; vec4 c = G.aoVP * vec4(wp.x + o.x, 0.0, wp.z + o.y, 1.0); float h = texture(aoTex, c.xy * 0.5 + 0.5).r * 0.25; occ += 1.0 - smoothstep(0.0, 0.16, h); }
+  occ /= 6.0;
+  vec4 c0 = G.aoVP * vec4(wp, 1.0); float h0 = texture(aoTex, c0.xy * 0.5 + 0.5).r * 0.25;
+  float ao = clamp(1.0 - 0.6 * occ - 0.3 * (1.0 - smoothstep(0.0, 0.05, h0)), 0.0, 1.0);
+  vec3 alb = vec3(0.53, 0.515, 0.49);
+  vec3 col = alb * (G.light.w * 0.44 * max(L.y, 0.0) * T + G.misc.z * 0.8 * ao);
+  col += vec3(ggx(vec3(0.0, 1.0, 0.0), V, L, 0.55)) * G.light.w * 0.05 * T;
+  float dist = length(wp.xz - vec2(-0.05, 0.0));
+  col *= mix(1.0, 0.62, smoothstep(1.6, 7.0, dist)); col = mix(col, vec3(0.20, 0.195, 0.19), smoothstep(7.0, 14.0, dist));
+  outC = vec4(enc(col), 1.0);
+}
+#elif defined(MILKF)
+void main() {
+  vec3 N = normalize(vN); vec3 V = normalize(G.cam.xyz - vWp); vec3 L = G.light.xyz;
+  vec3 T = pcf(vWp, gl_FragCoord.xy, 2.5);
+  float wrap = max((dot(N, L) + 0.45) / 1.45, 0.0);
+  vec3 col = G.milk.xyz * (G.light.w * 0.72 * T * wrap + G.misc.z * (0.75 + 0.25 * N.y) * 1.05);
+  col += G.milk.xyz * G.light.w * 0.10 * T; col += vec3(ggx(N, V, L, 0.42)) * G.light.w * 0.06 * T;
+  col *= mix(0.62, 1.0, smoothstep(0.0, 0.12, vWp.y));
+  outC = vec4(enc(col), 1.0);
+}
+#elif defined(EYEF)
+void main() {
+  vec3 N = normalize(vN); vec3 V = normalize(G.cam.xyz - vWp); vec3 L = G.light.xyz; float F = schlick(0.05, dot(N, V));
+  vec3 col = vec3(0.010, 0.008, 0.008) * (G.misc.z + G.light.w * max(dot(N, L), 0.0));
+  col += vec3(ggx(N, V, L, 0.07)) * G.light.w * 0.9; col += env(reflect(-V, N)) * F * 1.3 + env(reflect(-V, N)) * 0.04;
+  outC = vec4(enc(col), 1.0);
+}
+#elif defined(BUBBLEF)
+void main() {
+  vec3 N = normalize(vN); vec3 V = normalize(G.cam.xyz - vWp); vec3 L = G.light.xyz; float f = 1.0 - abs(dot(N, V));
+  float a = clamp(0.06 + 0.9 * pow(f, 2.6), 0.0, 1.0);
+  vec3 col = vec3(0.92, 0.95, 1.0) * (0.25 + 0.5 * f) + env(reflect(-V, N)) * 0.35 + vec3(ggx(N, V, L, 0.08)) * G.light.w * 0.6;
+  outC = vec4(enc(col), a);
+}
+#elif defined(TONEF)
+void main() { outC = finalize(dec(texelFetch(opC, ivec2(gl_FragCoord.xy), 0).rgb)); }
+#elif defined(LINEF)
+void main() { outC = vec4(0.95, 0.97, 1.0, G.misc.w); }
+#elif defined(JELLYF)
+void main() {
+  bool isDrop = vKind > 1.5;
+  vec3 N = normalize(vN);
+  vec3 dPdx = dFdx(vWp); vec3 dPdy = dFdy(vWp);
+  vec2 r0 = relief(vRp); float hgt = r0.x * 0.0026; float dHdx = dFdx(hgt); float dHdy = dFdy(hgt);
+  float dark = r0.y;
+  if (!isDrop) {
+    vec3 R1 = cross(dPdy, N); vec3 R2 = cross(N, dPdx); float det = dot(dPdx, R1);
+    vec3 sg = sign(det) * (dHdx * R1 + dHdy * R2); N = normalize(abs(det) * N - sg);
+  } else { dark = 0.0; }
+  ivec2 ip = ivec2(gl_FragCoord.xy);
+  float opq = lin(texelFetch(opD, ip, 0).r);
+  if (opq < vLin - 0.002) { discard; }
+  float back = lin(texelFetch(backD, ip, 0).r);
+  vec3 V = normalize(G.cam.xyz - vWp); vec3 L = G.light.xyz; float ndv = max(dot(N, V), 0.0);
+  float thick = max(min(back, opq) - vLin, 0.0);
+  vec3 nv = (G.view * vec4(N, 0.0)).xyz; vec2 uv = gl_FragCoord.xy * G.screen.zw;
+  float k = 0.085 * smoothstep(0.0, 0.25, thick) / max(vLin * 0.32, 0.6);
+  vec2 ruv = clamp(uv + vec2(-nv.x, -nv.y) * k * vec2(G.screen.y * G.screen.z, 1.0), vec2(0.001), vec2(0.999));
+  vec3 bg = dec(texture(opC, ruv).rgb);
+  vec3 absorb = exp(-G.sigma.xyz * (thick + 0.045));
+  vec3 lc = lightCoord(vWp + N * 0.004); vec3 Ts = (transAt(lc.xy, lc.z) + transAt(lc.xy + vec2(1.5 / G.misc.x, 0.0), lc.z) + transAt(lc.xy - vec2(0.0, 1.5 / G.misc.x), lc.z)) / 3.0;
+  float Tl = dot(Ts, vec3(0.333)); float ndl = dot(N, L);
+  vec3 scat = G.tint.xyz * (G.light.w * 0.07 * Ts * max((ndl + 0.5) / 1.5, 0.0) + G.misc.z * 0.12) * (1.0 - absorb);
+  float phase = pow(max(dot(-V, L), 0.0), 2.0) * 0.9 + 0.12;
+  vec3 glow = G.tint.xyz * G.light.w * 1.3 * Ts * phase * (1.0 - exp(-thick * 9.0)) * smoothstep(0.25, -0.1, ndl);
+  vec3 trans = bg * absorb + scat + glow;
+  if (isDrop) { float stripe = 1.0 - smoothstep(0.14, 0.24, abs(vRp.x)); trans = mix(trans, G.milk.xyz * (G.misc.z * 0.9 + G.light.w * 0.35 * Tl * max(ndl * 0.6 + 0.4, 0.0)), stripe * 0.75); }
+  trans = mix(trans, vec3(0.035, 0.012, 0.01), clamp(dark * 0.85, 0.0, 0.9));
+  float F = schlick(0.03, ndv); float aoj = mix(0.55, 1.0, smoothstep(0.0, 0.12, vWp.y));
+  vec3 refl = env(reflect(-V, N)) * aoj;
+  vec3 spec = vec3(ggx(N, V, L, 0.11)) * G.light.w * Tl * 1.1 + vec3(ggx(N, V, L, 0.32)) * G.light.w * Tl * 0.12;
+  outC = finalize(trans * (1.0 - F) + refl * F + spec);
+}
+#endif
+`;
+let gl=null; const RG={}; // WebGL2 resources
+function initGL(){
+  gl=canvas.getContext('webgl2',{antialias:false,depth:true,stencil:false,alpha:false,premultipliedAlpha:false,powerPreference:'high-performance'});
+  if(!gl) throw new Error('WebGL2 is not available in this browser.');
+  canvas.addEventListener('webglcontextlost',e=>{ e.preventDefault(); showFallback('The WebGL2 context was lost.'); });
+  const sh=(type,src)=>{ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s); if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) throw new Error('GLSL: '+gl.getShaderInfoLog(s)); return s; };
+  const prog=(vdefs,fdefs)=>{ const p=gl.createProgram();
+    const vs=sh(gl.VERTEX_SHADER,GLSL_HEAD.replace('\n','\n'+vdefs.map(d=>'#define '+d+'\n').join(''))+GLSL_VS);
+    const fs=sh(gl.FRAGMENT_SHADER,GLSL_HEAD.replace('\n','\n'+fdefs.map(d=>'#define '+d+'\n').join(''))+GLSL_FS);
+    gl.attachShader(p,vs); gl.attachShader(p,fs); gl.linkProgram(p); if(!gl.getProgramParameter(p,gl.LINK_STATUS)) throw new Error('GLSL link: '+gl.getProgramInfoLog(p));
+    gl.deleteShader(vs); gl.deleteShader(fs);
+    const bi=gl.getUniformBlockIndex(p,'Globals'); if(bi!==gl.INVALID_INDEX) gl.uniformBlockBinding(p,bi,0);
+    const si=gl.getUniformBlockIndex(p,'Spine'); if(si!==gl.INVALID_INDEX) gl.uniformBlockBinding(p,si,1);
+    gl.useProgram(p); ['nodePos','nodeCof','shF','shB','aoTex','opC','opD','backD'].forEach((n,i)=>{ const l=gl.getUniformLocation(p,n); if(l) gl.uniform1i(l,i); });
+    return p; };
+  RG.pSkinLight=prog(['SKIN','LIGHT'],['DEPTH']); RG.pSphLight=prog(['SPHERE','LIGHT'],['DEPTH']);
+  RG.pSkinAO=prog(['SKIN','AO'],['AOH']); RG.pSphAO=prog(['SPHERE','AO'],['AOH']);
+  RG.pFloor=prog(['FLOOR'],['FLOORF']); RG.pMilk=prog(['SKIN'],['MILKF']); RG.pEye=prog(['SPHERE'],['EYEF']); RG.pBubble=prog(['SPHERE'],['BUBBLEF']);
+  RG.pSkinBack=prog(['SKIN','LIGHT_NONE'],['DEPTH']); RG.pSphBack=prog(['SPHERE'],['DEPTH']);
+  RG.pTone=prog(['QUAD'],['TONEF']); RG.pJellySkin=prog(['SKIN'],['JELLYF']); RG.pJellySph=prog(['SPHERE'],['JELLYF']); RG.pLine=prog(['LINE'],['LINEF']);
+  RG.ubo=gl.createBuffer(); gl.bindBuffer(gl.UNIFORM_BUFFER,RG.ubo); gl.bufferData(gl.UNIFORM_BUFFER,512,gl.DYNAMIC_DRAW); gl.bindBufferBase(gl.UNIFORM_BUFFER,0,RG.ubo);
+  RG.spine=gl.createBuffer(); gl.bindBuffer(gl.UNIFORM_BUFFER,RG.spine); gl.bufferData(gl.UNIFORM_BUFFER,ST_N*16,gl.DYNAMIC_DRAW); gl.bindBufferBase(gl.UNIFORM_BUFFER,1,RG.spine);
+  // spheres: shared vertex/index buffers, per-instance attributes from one dynamic buffer
+  R.instData=new Float32Array(INST_MAX*12);
+  const sph=icosphere(QUAL.phone?2:3); RG.sphN=sph.idx.length;
+  RG.sphV=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,RG.sphV); gl.bufferData(gl.ARRAY_BUFFER,sph.pos,gl.STATIC_DRAW);
+  RG.sphI=gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,null);
+  RG.inst=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,RG.inst); gl.bufferData(gl.ARRAY_BUFFER,INST_MAX*48,gl.DYNAMIC_DRAW);
+  RG.sphVao=gl.createVertexArray(); gl.bindVertexArray(RG.sphVao);
+  gl.bindBuffer(gl.ARRAY_BUFFER,RG.sphV); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,3,gl.FLOAT,false,12,0);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,RG.sphI); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,sph.idx,gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER,RG.inst); for(const l of [4,5,6]){ gl.enableVertexAttribArray(l); gl.vertexAttribDivisor(l,1); }
+  gl.bindVertexArray(null);
+  RG.emptyVao=gl.createVertexArray();
+  // fixed-size targets: light depth maps and the contact-AO height map
+  const depthTex=(w,h)=>{ const t=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,t); gl.texStorage2D(gl.TEXTURE_2D,1,gl.DEPTH_COMPONENT24,w,h); texParams(gl.NEAREST); return t; };
+  const fbo=(color,depthT,depthRB)=>{ const f=gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER,f);
+    if(color) gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,color,0);
+    if(depthT) gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,depthT,0);
+    if(depthRB) gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,depthRB);
+    gl.drawBuffers(color?[gl.COLOR_ATTACHMENT0]:[gl.NONE]); gl.readBuffer(gl.NONE);
+    const st=gl.checkFramebufferStatus(gl.FRAMEBUFFER); if(st!==gl.FRAMEBUFFER_COMPLETE) throw new Error('WebGL2 framebuffer incomplete: '+st); return f; };
+  RG.depthTex=depthTex; RG.fbo=fbo;
+  RG.shF=depthTex(SHADOW_SIZE,SHADOW_SIZE); RG.shB=depthTex(SHADOW_SIZE,SHADOW_SIZE); RG.fShF=fbo(null,RG.shF); RG.fShB=fbo(null,RG.shB);
+  RG.aoC=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,RG.aoC); gl.texStorage2D(gl.TEXTURE_2D,1,gl.RGBA8,AO_SIZE,AO_SIZE); texParams(gl.LINEAR);
+  RG.aoD=gl.createRenderbuffer(); gl.bindRenderbuffer(gl.RENDERBUFFER,RG.aoD); gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT24,AO_SIZE,AO_SIZE);
+  RG.fAO=fbo(RG.aoC,null,RG.aoD);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  uploadMeshesGL();
+}
+function texParams(f){ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,f); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,f); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE); }
+function uploadMeshesGL(){
+  const mkSkin=(M,old)=>{ if(old){ gl.deleteVertexArray(old.vao); gl.deleteBuffer(old.vb); gl.deleteBuffer(old.ib); }
+    const buf=skinVertexData(M); const vao=gl.createVertexArray(); gl.bindVertexArray(vao);
+    const vb=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,vb); gl.bufferData(gl.ARRAY_BUFFER,buf,gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,3,gl.FLOAT,false,56,0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1,3,gl.FLOAT,false,56,12);
+    gl.enableVertexAttribArray(2); gl.vertexAttribIPointer(2,4,gl.UNSIGNED_INT,56,24); gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3,4,gl.FLOAT,false,56,40);
+    const ib=gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,M.idx,gl.STATIC_DRAW);
+    gl.bindVertexArray(null); return {vao,vb,ib,n:M.idx.length}; };
+  RG.jelly=mkSkin(MESH,RG.jelly); RG.milk=mkSkin(MILK,RG.milk);
+  // node textures: positions (1 texel per node) and cofactor columns (3 texels per node), 1024 wide
+  for(const k of ['posTex','cofTex']) if(RG[k]) gl.deleteTexture(RG[k]);
+  const mk=(texels)=>{ const h=Math.max(1,Math.ceil(texels/1024)); const t=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,t); gl.texStorage2D(gl.TEXTURE_2D,1,gl.RGBA32F,1024,h); texParams(gl.NEAREST); return {t,h,data:new Float32Array(1024*h*4)}; };
+  const P=mk(S.nN), C=mk(S.nN*3); RG.posTex=P.t; RG.posH=P.h; RG.posData=P.data; RG.cofTex=C.t; RG.cofH=C.h; RG.cofData=C.data;
+  if(RG.edgeBuf) gl.deleteBuffer(RG.edgeBuf);
+  RG.edgeBuf=gl.createBuffer(); gl.bindVertexArray(RG.emptyVao); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,RG.edgeBuf); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint32Array(S.edges),gl.STATIC_DRAW); gl.bindVertexArray(null);
+  gl.bindBuffer(gl.UNIFORM_BUFFER,RG.spine); gl.bufferSubData(gl.UNIFORM_BUFFER,0,SPEC.gpuTable);
+}
+function ensureTargetsGL(){
+  const dpr=Math.min(window.devicePixelRatio||1,QUAL.dpr); const w=Math.max(2,Math.round(canvas.clientWidth*dpr)), h=Math.max(2,Math.round(canvas.clientHeight*dpr));
+  if(R.W===w&&R.H===h) return; R.W=w; R.H=h; canvas.width=w; canvas.height=h;
+  for(const k of ['opC','opD','backD']) if(RG[k]) gl.deleteTexture(RG[k]);
+  for(const k of ['fOp','fBack']) if(RG[k]) gl.deleteFramebuffer(RG[k]);
+  RG.opC=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,RG.opC); gl.texStorage2D(gl.TEXTURE_2D,1,gl.RGBA8,w,h); texParams(gl.LINEAR);
+  RG.opD=RG.depthTex(w,h); RG.backD=RG.depthTex(w,h);
+  RG.fOp=RG.fbo(RG.opC,RG.opD); RG.fBack=RG.fbo(null,RG.backD); gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+}
+function renderGL(){
+  ensureTargetsGL();
+  const u=buildUniforms(); gl.bindBuffer(gl.UNIFORM_BUFFER,RG.ubo); gl.bufferSubData(gl.UNIFORM_BUFFER,0,u);
+  RG.posData.set(S.posF32); RG.cofData.set(S.cofF32);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,RG.posTex); gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,1024,RG.posH,gl.RGBA,gl.FLOAT,RG.posData);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,RG.cofTex); gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,1024,RG.cofH,gl.RGBA,gl.FLOAT,RG.cofData);
+  const nInst=fillInstances(); gl.bindBuffer(gl.ARRAY_BUFFER,RG.inst); gl.bufferSubData(gl.ARRAY_BUFFER,0,R.instData,0,nInst*12);
+  const unbindTargets=()=>{ for(let i=2;i<8;i++){ gl.activeTexture(gl.TEXTURE0+i); gl.bindTexture(gl.TEXTURE_2D,null); } };
+  const bindTargets=()=>{ const T=[RG.shF,RG.shB,RG.aoC,RG.opC,RG.opD,RG.backD]; T.forEach((t,i)=>{ gl.activeTexture(gl.TEXTURE2+i); gl.bindTexture(gl.TEXTURE_2D,t); }); };
+  const skin=(p,M)=>{ gl.useProgram(p); gl.bindVertexArray(M.vao); gl.drawElements(gl.TRIANGLES,M.n,gl.UNSIGNED_INT,0); };
+  const sph=(p,first,count)=>{ if(count<=0) return; gl.useProgram(p); gl.bindVertexArray(RG.sphVao); gl.bindBuffer(gl.ARRAY_BUFFER,RG.inst);
+    const o=first*48; gl.vertexAttribPointer(4,4,gl.FLOAT,false,48,o); gl.vertexAttribPointer(5,4,gl.FLOAT,false,48,o+16); gl.vertexAttribPointer(6,4,gl.FLOAT,false,48,o+32);
+    gl.drawElementsInstanced(gl.TRIANGLES,RG.sphN,gl.UNSIGNED_INT,0,count); };
+  gl.disable(gl.BLEND); gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.enable(gl.CULL_FACE);
+  unbindTargets();
+  // 1. light front depth (jelly, eyes, drops)
+  gl.bindFramebuffer(gl.FRAMEBUFFER,RG.fShF); gl.viewport(0,0,SHADOW_SIZE,SHADOW_SIZE); gl.clearDepth(1); gl.clear(gl.DEPTH_BUFFER_BIT); gl.depthFunc(gl.LESS); gl.cullFace(gl.BACK);
+  skin(RG.pSkinLight,RG.jelly); sph(RG.pSphLight,0,R.nEyes); sph(RG.pSphLight,R.dropStart,R.nDrops);
+  // 2. light back depth (farthest back faces)
+  gl.bindFramebuffer(gl.FRAMEBUFFER,RG.fShB); gl.clearDepth(0); gl.clear(gl.DEPTH_BUFFER_BIT); gl.depthFunc(gl.GREATER); gl.cullFace(gl.FRONT);
+  skin(RG.pSkinLight,RG.jelly); sph(RG.pSphLight,R.dropStart,R.nDrops);
+  // 3. contact-AO height map from under the table
+  gl.bindFramebuffer(gl.FRAMEBUFFER,RG.fAO); gl.viewport(0,0,AO_SIZE,AO_SIZE); gl.clearColor(1,0,0,1); gl.clearDepth(1); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT); gl.depthFunc(gl.LESS); gl.disable(gl.CULL_FACE);
+  skin(RG.pSkinAO,RG.jelly); sph(RG.pSphAO,R.dropStart,R.nDrops);
+  // 4. opaque scene: table, milky layer, eyes, bubbles (stored encoded in RGBA8)
+  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D,RG.shF); gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D,RG.shB); gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D,RG.aoC);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,RG.fOp); gl.viewport(0,0,R.W,R.H); const bgc=[0.2/1.2,0.195/1.195,0.19/1.19]; gl.clearColor(bgc[0],bgc[1],bgc[2],1); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.useProgram(RG.pFloor); gl.bindVertexArray(RG.emptyVao); gl.drawArrays(gl.TRIANGLES,0,6);
+  gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK); skin(RG.pMilk,RG.milk); sph(RG.pEye,0,R.nEyes);
+  gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); sph(RG.pBubble,R.nEyes,R.nBub); gl.depthMask(true); gl.disable(gl.BLEND);
+  // 5. jelly back faces: depth for thickness
+  gl.bindFramebuffer(gl.FRAMEBUFFER,RG.fBack); gl.clearDepth(1); gl.clear(gl.DEPTH_BUFFER_BIT); gl.cullFace(gl.FRONT);
+  skin(RG.pSkinBack,RG.jelly); sph(RG.pSphBack,R.dropStart,R.nDrops);
+  // 6. to the canvas: tone-mapped opaque image, then jelly front faces with refraction
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null); bindTargets(); gl.clearColor(0,0,0,1); gl.clearDepth(1); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.disable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE); gl.useProgram(RG.pTone); gl.bindVertexArray(RG.emptyVao); gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
+  skin(RG.pJellySkin,RG.jelly); sph(RG.pJellySph,R.dropStart,R.nDrops);
+  if(UI.mesh){ gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA); gl.useProgram(RG.pLine); gl.bindVertexArray(RG.emptyVao); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,RG.edgeBuf); gl.drawElements(gl.LINES,S.nE*2,gl.UNSIGNED_INT,0); gl.disable(gl.BLEND); }
+  gl.bindVertexArray(null);
+}
+
+// ================================================================
 //  Interaction
 // ================================================================
 function rayFrom(ev){ const r=canvas.getBoundingClientRect(); const nx=((ev.clientX-r.left)/r.width)*2-1, ny=1-((ev.clientY-r.top)/r.height)*2;
@@ -1324,7 +1703,7 @@ function pickBody(ray){
 }
 function pickDrop(ray){ let best=null, bt=1e9; for(const D of drops){ const oc=[ray.o[0]-D.x[0],ray.o[1]-D.x[1],ray.o[2]-D.x[2]]; const b=dot3(oc,ray.d); const c=dot3(oc,oc)-(D.r*1.35)**2; const h=b*b-c; if(h<0) continue; const t=-b-Math.sqrt(h); if(t>0&&t<bt){bt=t;best=D;} } return best?{D:best,t:bt}:null; }
 function planeHit(ray,p0,n){ const den=dot3(ray.d,n); if(Math.abs(den)<1e-6) return null; const t=dot3([p0[0]-ray.o[0],p0[1]-ray.o[1],p0[2]-ray.o[2]],n)/den; return t>0?[ray.o[0]+ray.d[0]*t,ray.o[1]+ray.d[1]*t,ray.o[2]+ray.d[2]*t]:null; }
-const pointers=new Map(); let orbit=null; let twoFinger=null;
+const pointers=new Map(); let orbit=null; let twoFinger=null; let pinch=null;
 function camFwd(){ return norm3([cam.target[0]-CAM.eye[0],cam.target[1]-CAM.eye[1],cam.target[2]-CAM.eye[2]]); }
 canvas.addEventListener('pointerdown',ev=>{
   if(!S||!CAM||busy) return;
@@ -1332,6 +1711,7 @@ canvas.addEventListener('pointerdown',ev=>{
   if(mouse && ev.button!==0) return; // only the left button does anything; right click is ignored (its menu is suppressed)
   canvas.setPointerCapture(ev.pointerId); pointers.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
   if(pointers.size===2 && (GRAB.active||GRAB.drop)){ const [a,b]=[...pointers.values()]; twoFinger={ang:Math.atan2(b.y-a.y,b.x-a.x), base:GRAB.twist}; return; }
+  if(pointers.size===2){ const [a,b]=[...pointers.values()]; pinch={d:Math.hypot(b.x-a.x,b.y-a.y)||1, dist:cam.dist}; orbit=null; return; } // two fingers, nothing held: pinch zooms
   if(pointers.size>1) return;
   const ray=rayFrom(ev); const fwd=camFwd();
   const dh=pickDrop(ray); const hit=pickBody(ray);
@@ -1349,6 +1729,7 @@ canvas.addEventListener('pointerdown',ev=>{
 });
 canvas.addEventListener('pointermove',ev=>{
   if(!pointers.has(ev.pointerId)) return; pointers.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+  if(pinch){ if(pointers.size>=2){ const [a,b]=[...pointers.values()]; cam.dist=clamp(pinch.dist*pinch.d/(Math.hypot(b.x-a.x,b.y-a.y)||1),2.0,7.5); } return; }
   if(twoFinger && pointers.size>=2){ const [a,b]=[...pointers.values()]; GRAB.twist=twoFinger.base+(Math.atan2(b.y-a.y,b.x-a.x)-twoFinger.ang); return; }
   const first=pointers.keys().next().value; if(ev.pointerId!==first) return;
   if(GRAB.active||GRAB.drop){ const ray=rayFrom(ev); const h=planeHit(ray,GRAB.plane,GRAB.fwd); if(!h) return;
@@ -1357,10 +1738,12 @@ canvas.addEventListener('pointermove',ev=>{
     GRAB.desired=[GRAB.hit0[0]+dx*s,GRAB.hit0[1]+dy*s,GRAB.hit0[2]+dz*s]; return; }
   if(orbit){ cam.yaw=orbit.yaw-(ev.clientX-orbit.x)*0.006; cam.pitch=clamp(orbit.pitch+(ev.clientY-orbit.y)*0.004,0.06,1.25); }
 });
-function endPointer(ev){ pointers.delete(ev.pointerId); if(pointers.size<2) twoFinger=null; if(pointers.size>0) return;
+function endPointer(ev){ pointers.delete(ev.pointerId); if(pointers.size<2) twoFinger=null; if(pointers.size>0) return; pinch=null;
   if(GRAB.drop){ GRAB.drop.grabbed=false; GRAB.drop=null; } GRAB.active=false; orbit=null; canvas.classList.remove('dragging','orbiting'); }
 canvas.addEventListener('pointerup',endPointer); canvas.addEventListener('pointercancel',endPointer);
 canvas.addEventListener('contextmenu',ev=>ev.preventDefault());
+// iOS Safari: no page pinch-zoom or double-tap zoom while interacting with the canvas
+for(const t of ['gesturestart','gesturechange','gestureend']) canvas.addEventListener(t,ev=>ev.preventDefault());
 canvas.addEventListener('wheel',ev=>{ ev.preventDefault(); if(GRAB.active){ GRAB.twist+=ev.deltaY*0.004; } else { cam.dist=clamp(cam.dist*Math.exp(ev.deltaY*0.001),2.0,7.5); } },{passive:false});
 
 function sneeze(){
@@ -1403,12 +1786,13 @@ function buildUI(){
   $('sneeze').onclick=()=>{ if(!busy) sneeze(); }; $('reset').onclick=()=>{ if(!busy) resetSim(); };
   const tog=(id,key,fn)=>{ $(id).onclick=()=>{ if(busy) return; UI[key]=!UI[key]; $(id).setAttribute('aria-pressed',UI[key]?'true':'false'); fn&&fn(); }; };
   tog('slow','slow'); tog('mesh','mesh'); tog('pause','paused'); tog('light','light',()=>{ rebuildLattice(); });
+  if(window.matchMedia && matchMedia('(pointer: coarse)').matches) $('keys').textContent='Drag the jelly to stretch it or carry a drop. Drag the table to orbit. Pinch to zoom; a second finger twists what you are holding.';
   panelBtn.onclick=()=>setPanel(panel.hidden,true);
   document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !panel.hidden){ setPanel(false); panelBtn.focus(); } });
   applyColour();
 }
 function applyColour(){ const c=COLOURWAYS[UI.colour]; const st=document.documentElement.style; st.setProperty('--accent',c.accent); st.setProperty('--accent-lt',c.accentLt); }
-function releasePointers(){ for(const id of pointers.keys()){ try{ canvas.releasePointerCapture(id); }catch(e){} } pointers.clear(); twoFinger=null; orbit=null;
+function releasePointers(){ for(const id of pointers.keys()){ try{ canvas.releasePointerCapture(id); }catch(e){} } pointers.clear(); twoFinger=null; orbit=null; pinch=null;
   if(GRAB.drop){ GRAB.drop.grabbed=false; GRAB.drop=null; } GRAB.active=false; canvas.classList.remove('dragging','orbiting'); }
 async function setSpecies(i){
   if(busy || i===UI.species) return;
@@ -1427,6 +1811,18 @@ async function setSpecies(i){
 // ================================================================
 let acc=0, last=performance.now(), simAcc=0, simN=0, frameAcc=0, frameN=0, uiTimer=0, perfChecked=false, startT=0;
 const FRAME_LOG=[]; // recent frame intervals in ms, for the testing hook
+// Frame-time governor: if the median frame stays over 22 ms (under about 45 fps), step quality down one notch every 2 s:
+// light lattice, then a lower pixel ratio (to 1), then fewer substeps (to 6). Two slow windows in a row are needed, so a passing hitch does not count. Logged to the console only.
+let governT=0, governBad=0;
+function govern(now){
+  if(now-startT<3000 || now-governT<2000 || document.visibilityState!=='visible' || FRAME_LOG.length<60) return;
+  const a=FRAME_LOG.slice(-90).sort((x,y)=>x-y), med=a[a.length>>1]; governT=now;
+  if(med<=22){ governBad=0; return; } if(++governBad<2) return; governBad=0; let step='';
+  if(!UI.light){ UI.light=true; $('light').setAttribute('aria-pressed','true'); rebuildLattice(); step='light lattice'; }
+  else if(QUAL.dpr>1){ QUAL.dpr=Math.max(1,QUAL.dpr-0.25); step='pixel ratio cap '+QUAL.dpr; }
+  else if(SUBSTEPS>6){ SUBSTEPS-=2; step=SUBSTEPS+' substeps'; }
+  if(step){ STATS.governor=(STATS.governor||[]).concat(step); console.info('Stego Jelly: frames at '+med.toFixed(1)+' ms, switching to '+step); }
+}
 function frame(now){
   const dtReal=Math.min(0.1,(now-last)/1000); last=now;
   if(busy){ requestAnimationFrame(frame); return; }
@@ -1438,10 +1834,11 @@ function frame(now){
     if(acc>1/HZ) acc=0;
     if(steps){ computeRenderData(); simAcc+=performance.now()-t0; simN+=steps; }
   } else acc=0;
-  render();
+  RND.render();
   uiTimer+=dtReal;
   if(uiTimer>0.25){ uiTimer=0; STATS.simMs=simN?simAcc/simN:STATS.simMs; STATS.frameMs=frameAcc/frameN*1000; STATS.fps=1000/STATS.frameMs; simAcc=0;simN=0;frameAcc=0;frameN=0;
     if(!perfChecked && now-startT>4000){ perfChecked=true; if(STATS.simMs>13 && !UI.light){ UI.light=true; $('light').setAttribute('aria-pressed','true'); rebuildLattice(); STATS.lowRes=true; } }
+    govern(now);
   }
   requestAnimationFrame(frame);
 }
@@ -1454,15 +1851,26 @@ function showFallback(msg){
 }
 async function main(){
   buildUI();
-  if(!('gpu' in navigator)){ showFallback('This browser has no WebGPU.'); return; }
-  try{
-    useSpecies(0); await buildSpecimen(); rebuildLattice(); await initGPU();
-  }catch(err){ console.error(err); showFallback(String(err.message||err)); return; }
+  const hasGL=!!document.createElement('canvas').getContext('webgl2');
+  if(!('gpu' in navigator) && !hasGL){ showFallback('This browser has neither WebGPU nor WebGL2.'); return; }
+  try{ useSpecies(0); await buildSpecimen(); rebuildLattice(); }
+  catch(err){ console.error(err); showFallback(String(err.message||err)); return; }
+  // renderer: WebGPU preferred, WebGL2 when WebGPU is missing or fails (or ?renderer=webgl2), the still only when neither works
+  let why='';
+  if(QS.get('renderer')!=='webgl2'){
+    try{ await initGPU(); RND={name:'webgpu', upload:uploadMeshes, render}; }
+    catch(err){ why=String(err.message||err); console.warn('WebGPU unavailable, using WebGL2. Reason: '+why); }
+  } else why='forced by ?renderer=webgl2';
+  if(!RND){
+    try{ initGL(); RND={name:'webgl2', upload:uploadMeshesGL, render:renderGL}; }
+    catch(err){ console.error(err); showFallback((why?'WebGPU: '+why+'. ':'')+'WebGL2: '+String(err.message||err)); return; }
+  }
+  console.info(`Stego Jelly renderer: ${RND.name}${why&&RND.name==='webgl2'?' ('+why+')':''}; phone mode: ${PHONE}; lattice: ${UI.light?'light':'fine'}`);
   cam.target=[...SPEC.cam.target]; cam.dist=SPEC.cam.dist; cam.pitch=SPEC.cam.pitch;
   $('loading').hidden=true; startT=performance.now(); last=performance.now(); busy=false;
   requestAnimationFrame(frame);
 }
-window.__stego={ get S(){return S;}, get drops(){return drops;}, STATS, UI, sneeze, resetSim, cam, GRAB, rebuildLattice, setSpecies, setPanel, SPECIES, get species(){ return SPEC.id; }, FRAME_LOG,
+window.__stego={ get S(){return S;}, get drops(){return drops;}, STATS, UI, sneeze, resetSim, cam, GRAB, rebuildLattice, setSpecies, setPanel, SPECIES, QUAL, get renderer(){ return RND&&RND.name; }, get substeps(){ return SUBSTEPS; }, get species(){ return SPEC.id; }, FRAME_LOG,
   maxDisp(){ let m=0; for(let n=0;n<S.nN;n++){ const d=Math.hypot(S.x[n*3]-S.X0[n*3],S.x[n*3+1]-S.X0[n*3+1],S.x[n*3+2]-S.X0[n*3+2]); if(d>m) m=d; } return m; },
   hasNaN(){ for(let i=0;i<S.x.length;i++) if(!Number.isFinite(S.x[i])) return true; return false; },
   maxSpeed(){ let m=0; for(let n=0;n<S.nN;n++){ m=Math.max(m,Math.hypot(S.v[n*3],S.v[n*3+1],S.v[n*3+2])); } return m; },
