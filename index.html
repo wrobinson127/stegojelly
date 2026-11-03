@@ -672,7 +672,7 @@ function substep(dt){
   for(let n=0;n<nN;n++){ const i=n*3; if(x[i+1]<0){ const pen=-x[i+1]; x[i+1]=0;
       const dx=x[i]-xp[i], dz=x[i+2]-xp[i+2]; const dl=Math.hypot(dx,dz);
       if(dl<muS*pen){ x[i]=xp[i]; x[i+2]=xp[i+2]; } else if(dl>0){ const k=Math.min(1,muK*pen/dl); x[i]-=dx*k; x[i+2]-=dz*k; } } }
-  if(PUNT && PUNT.wall) wallContact();
+  wallContact();
   const idt=1/dt; const vm2=nodeVmax*nodeVmax;
   for(let n=0;n<nN;n++){ const i=n*3; let a=(x[i]-xp[i])*idt, b=(x[i+1]-xp[i+1])*idt, c=(x[i+2]-xp[i+2])*idt; const s2=a*a+b*b+c*c;
     if(s2>vm2){ const k=nodeVmax/Math.sqrt(s2); a*=k; b*=k; c*=k; } v[i]=a; v[i+1]=b; v[i+2]=c; }
@@ -808,7 +808,7 @@ function dropsStep(dt){
   // floor, the punt wall, and velocities
   for(const D of drops){
     if(D.x[1]<D.r){ D.x[1]=D.r; D.contact=true; D.floor=true; }
-    if(PUNT && PUNT.wall){ const f=PUNT.f, d=D.x[0]*f[0]+D.x[2]*f[2]-(PUNT.c-D.r); if(d>0){ D.x[0]-=f[0]*d; D.x[2]-=f[2]*d; D.contact=true; } }
+    { const f=WALL_F, d=D.x[0]*f[0]+D.x[2]*f[2]-(WALL_C-D.r); if(d>0){ D.x[0]-=f[0]*d; D.x[2]-=f[2]*d; D.contact=true; } }
     if(D.grabbed){ for(let a=0;a<3;a++) D.v[a]=(D.x[a]-D.xp[a])/dt; const sp=Math.hypot(...D.v); if(sp>7){ for(let a=0;a<3;a++) D.v[a]*=7/sp; } continue; }
     for(let a=0;a<3;a++) D.v[a]=(D.x[a]-D.xp[a])/dt;
     if(D.floor){
@@ -927,6 +927,11 @@ fn sphereWorld(p: vec3f, ii: u32) -> vec3f { let I = inst[ii]; return I.pr.xyz +
 @vertex fn vsFloor(@builtin(vertex_index) i: u32) -> VOut {
   var c = array<vec2f, 6>(vec2f(-1.0,-1.0), vec2f(1.0,-1.0), vec2f(1.0,1.0), vec2f(-1.0,-1.0), vec2f(1.0,1.0), vec2f(-1.0,1.0));
   var o: VOut; let xz = c[i] * 16.0; let wp = vec3f(xz.x, 0.0, xz.y); o.pos = G.viewProj * vec4f(wp, 1.0); o.wp = wp; o.n = vec3f(0.0,1.0,0.0); o.rp = wp; o.kind = 0.0; o.lin = linDepth(wp); return o; }
+// the back wall (matches WALL_YAW = 0.9, WALL_C = 12 in the punt code): faces the origin, 40 u wide, 16 u tall
+@vertex fn vsWall(@builtin(vertex_index) i: u32) -> VOut {
+  var c = array<vec2f, 6>(vec2f(-1.0,0.0), vec2f(1.0,0.0), vec2f(1.0,1.0), vec2f(-1.0,0.0), vec2f(1.0,1.0), vec2f(-1.0,1.0));
+  let t = vec3f(0.6216100, 0.0, -0.7833269); let wp = vec3f(-9.3999229, 0.0, -7.4593196) + t * (c[i].x * 20.0) + vec3f(0.0, c[i].y * 16.0, 0.0);
+  var o: VOut; o.pos = G.viewProj * vec4f(wp, 1.0); o.wp = wp; o.n = vec3f(0.7833269, 0.0, 0.6216100); o.rp = wp; o.kind = 0.0; o.lin = linDepth(wp); return o; }
 @vertex fn vsLine(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f { let p = nodePos[edges[i]].xyz; return G.viewProj * vec4f(p, 1.0); }
 
 @fragment fn fsAO(in: VOut) -> @location(0) vec4f { return vec4f(in.wp.y, 0.0, 0.0, 1.0); }
@@ -1063,6 +1068,12 @@ fn blotch(p: vec3f) -> f32 {
   let dist = length(wp.xz - vec2f(-0.05, 0.0));
   col *= mix(1.0, 0.62, smoothstep(1.6, 7.0, dist));
   col = mix(col, vec3f(0.20, 0.195, 0.19), smoothstep(7.0, 14.0, dist));
+  var o: MRT; o.c = vec4f(col, 1.0); o.l = vec4f(in.lin, 0.0, 0.0, 1.0); return o;
+}
+@fragment fn fsWall(in: VOut) -> MRT {
+  let y = in.wp.y; let s = dot(in.wp.xz, vec2f(0.6216100, -0.7833269));
+  var col = vec3f(0.53, 0.515, 0.49) * (G.light.w * 0.20 + G.misc.z * 0.95) * (0.985 + 0.03 * ign(floor(in.wp.xy * 900.0)));
+  col *= mix(0.72, 1.0, smoothstep(0.0, 0.9, y)) * mix(1.0, 0.55, smoothstep(2.0, 14.0, y)) * mix(1.0, 0.6, smoothstep(4.0, 18.0, abs(s)));
   var o: MRT; o.c = vec4f(col, 1.0); o.l = vec4f(in.lin, 0.0, 0.0, 1.0); return o;
 }
 @fragment fn fsMilk(in: VOut) -> MRT {
@@ -1274,7 +1285,7 @@ async function initGPU(){
   const aoT=[{format:'rgba16float'}];
   R.pAOSkin=P(plA,'vsSkinAO',skinVB,'fsAO',aoT,'none',depth('less')); R.pAOSph=P(plA,'vsSphAO',sphVB,'fsAO',aoT,'none',depth('less'));
   const mrt=[{format:'rgba16float'},{format:'r32float'}];
-  R.pFloor=P(plO,'vsFloor',[],'fsFloor',mrt,'none',depth('less'));
+  R.pFloor=P(plO,'vsFloor',[],'fsFloor',mrt,'none',depth('less')); R.pWall=P(plO,'vsWall',[],'fsWall',mrt,'none',depth('less'));
   R.pMilk=P(plO,'vsSkinMain',skinVB,'fsMilk',mrt,'back',depth('less'));
   R.pEye=P(plO,'vsSphMain',sphVB,'fsEye',mrt,'back',depth('less'));
   R.pBubble=P(plO,'vsSphMain',sphVB,'fsBubble',[{format:'rgba16float',blend:{color:{srcFactor:'src-alpha',dstFactor:'one-minus-src-alpha'},alpha:{srcFactor:'one',dstFactor:'one-minus-src-alpha'}}},{format:'r32float',writeMask:0}],'back',depth('less',false));
@@ -1400,7 +1411,7 @@ function render(){
   p=enc.beginRenderPass({colorAttachments:[{view:R.opC.createView(),clearValue:[0.2,0.195,0.19,1],loadOp:'clear',storeOp:'store'},{view:R.opL.createView(),clearValue:[100,0,0,1],loadOp:'clear',storeOp:'store'}],
     depthStencilAttachment:{view:R.opD.createView(),depthClearValue:1,depthLoadOp:'clear',depthStoreOp:'store'}});
   p.setBindGroup(0,R.bg0); p.setBindGroup(1,R.bg1o);
-  p.setPipeline(R.pFloor); p.draw(6); p.setPipeline(R.pMilk); drawSkin(p,R.milk);
+  p.setPipeline(R.pFloor); p.draw(6); p.setPipeline(R.pWall); p.draw(6); p.setPipeline(R.pMilk); drawSkin(p,R.milk);
   p.setPipeline(R.pEye); drawSph(p,0,R.nEyes); p.setPipeline(R.pBubble); drawSph(p,R.nEyes,R.nBub); p.end();
   // 6. jelly back faces: linear depth for thickness
   p=enc.beginRenderPass({colorAttachments:[{view:R.backC.createView(),clearValue:[100,0,0,1],loadOp:'clear',storeOp:'store'}],depthStencilAttachment:{view:R.backD.createView(),depthClearValue:1,depthLoadOp:'clear',depthStoreOp:'store'}});
@@ -1467,6 +1478,12 @@ void main() {
   vec2 c[6] = vec2[6](vec2(-1.0,-1.0), vec2(1.0,-1.0), vec2(1.0,1.0), vec2(-1.0,-1.0), vec2(1.0,1.0), vec2(-1.0,1.0));
   vec2 xz = c[gl_VertexID] * 16.0; vec3 wp = vec3(xz.x, 0.0, xz.y);
   vWp = wp; vN = vec3(0.0, 1.0, 0.0); vRp = wp; vKind = 0.0; vLin = linDepth(wp); gl_Position = G.viewProj * vec4(wp, 1.0);
+}
+#elif defined(WALL)
+void main() {
+  vec2 c[6] = vec2[6](vec2(-1.0,0.0), vec2(1.0,0.0), vec2(1.0,1.0), vec2(-1.0,0.0), vec2(1.0,1.0), vec2(-1.0,1.0));
+  vec3 wp = vec3(-9.3999229, 0.0, -7.4593196) + vec3(0.6216100, 0.0, -0.7833269) * (c[gl_VertexID].x * 20.0) + vec3(0.0, c[gl_VertexID].y * 16.0, 0.0);
+  vWp = wp; vN = vec3(0.7833269, 0.0, 0.6216100); vRp = wp; vKind = 0.0; vLin = linDepth(wp); gl_Position = G.viewProj * vec4(wp, 1.0);
 }
 #elif defined(QUAD)
 void main() { vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); vWp = vec3(0.0); vN = vWp; vRp = vWp; vKind = 0.0; vLin = 0.0; gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }
@@ -1599,6 +1616,13 @@ void main() {
   col *= mix(1.0, 0.62, smoothstep(1.6, 7.0, dist)); col = mix(col, vec3(0.20, 0.195, 0.19), smoothstep(7.0, 14.0, dist));
   outC = vec4(enc(col), 1.0);
 }
+#elif defined(WALLF)
+void main() {
+  float y = vWp.y; float s = dot(vWp.xz, vec2(0.6216100, -0.7833269));
+  vec3 col = vec3(0.53, 0.515, 0.49) * (G.light.w * 0.20 + G.misc.z * 0.95);
+  col *= mix(0.72, 1.0, smoothstep(0.0, 0.9, y)) * mix(1.0, 0.55, smoothstep(2.0, 14.0, y)) * mix(1.0, 0.6, smoothstep(4.0, 18.0, abs(s)));
+  outC = vec4(enc(col), 1.0);
+}
 #elif defined(MILKF)
 void main() {
   vec3 N = normalize(vN); vec3 V = normalize(G.cam.xyz - vWp); vec3 L = G.light.xyz;
@@ -1683,7 +1707,7 @@ function initGL(){
     return p; };
   RG.pSkinLight=prog(['SKIN','LIGHT'],['DEPTH']); RG.pSphLight=prog(['SPHERE','LIGHT'],['DEPTH']);
   RG.pSkinAO=prog(['SKIN','AO'],['AOH']); RG.pSphAO=prog(['SPHERE','AO'],['AOH']);
-  RG.pFloor=prog(['FLOOR'],['FLOORF']); RG.pMilk=prog(['SKIN'],['MILKF']); RG.pEye=prog(['SPHERE'],['EYEF']); RG.pBubble=prog(['SPHERE'],['BUBBLEF']);
+  RG.pFloor=prog(['FLOOR'],['FLOORF']); RG.pWall=prog(['WALL'],['WALLF']); RG.pMilk=prog(['SKIN'],['MILKF']); RG.pEye=prog(['SPHERE'],['EYEF']); RG.pBubble=prog(['SPHERE'],['BUBBLEF']);
   RG.pSkinBack=prog(['SKIN','LIGHT_NONE'],['DEPTH']); RG.pSphBack=prog(['SPHERE'],['DEPTH']);
   RG.pTone=prog(['QUAD'],['TONEF']); RG.pJellySkin=prog(['SKIN'],['JELLYF']); RG.pJellySph=prog(['SPHERE'],['JELLYF']); RG.pLine=prog(['LINE'],['LINEF']);
   RG.ubo=gl.createBuffer(); gl.bindBuffer(gl.UNIFORM_BUFFER,RG.ubo); gl.bufferData(gl.UNIFORM_BUFFER,512,gl.DYNAMIC_DRAW); gl.bindBufferBase(gl.UNIFORM_BUFFER,0,RG.ubo);
@@ -1770,7 +1794,7 @@ function renderGL(){
   // 4. opaque scene: table, milky layer, eyes, bubbles (stored encoded in RGBA8)
   gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D,RG.shF); gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D,RG.shB); gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D,RG.aoC);
   gl.bindFramebuffer(gl.FRAMEBUFFER,RG.fOp); gl.viewport(0,0,R.W,R.H); const bgc=[0.2/1.2,0.195/1.195,0.19/1.19]; gl.clearColor(bgc[0],bgc[1],bgc[2],1); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-  gl.useProgram(RG.pFloor); gl.bindVertexArray(RG.emptyVao); gl.drawArrays(gl.TRIANGLES,0,6);
+  gl.useProgram(RG.pFloor); gl.bindVertexArray(RG.emptyVao); gl.drawArrays(gl.TRIANGLES,0,6); gl.useProgram(RG.pWall); gl.drawArrays(gl.TRIANGLES,0,6);
   gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK); skin(RG.pMilk,RG.milk); sph(RG.pEye,0,R.nEyes);
   gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); sph(RG.pBubble,R.nEyes,R.nBub); gl.depthMask(true); gl.disable(gl.BLEND);
   // 5. jelly back faces: depth for thickness
@@ -1787,10 +1811,11 @@ function renderGL(){
 
 // ================================================================
 //  Easter egg: click or tap the body 5 times quickly (within 1.5 s, no drag) and it gets punted: kicked up and away in a
-//  high arc into a wall far behind it. The wall is an invisible collision plane, placed at punt time PUNT_WALL_GAP u
-//  behind the body, facing the camera. The camera rises and pulls back to keep the flight and the splat in frame.
+//  high arc into the back wall. The wall is a fixed plane WALL_C u from the origin (drawn by vsWall/fsWall, whose
+//  constants match these). The camera swings to face the wall, rises, and pulls back to keep the flight and splat in frame.
 // ================================================================
-const PUNT_CLICKS=5, PUNT_WINDOW=1500, PUNT_VMAX=34, PUNT_WALL_GAP=6.5, PUNT_VX=12, PUNT_VY=22, PUNT_PULLBACK=4.5;
+const WALL_YAW=0.9, WALL_C=12, WALL_F=[-Math.sin(WALL_YAW),0,-Math.cos(WALL_YAW)]; // dot(p, WALL_F) = WALL_C is the wall
+const PUNT_CLICKS=5, PUNT_WINDOW=1500, PUNT_VMAX=50, PUNT_VX=22, PUNT_VY=28, PUNT_PULLBACK=6;
 let PUNT=null; const puntClicks=[]; let camShake=null;
 const reducedMotion=()=>!!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 function puntClick(){ const now=performance.now(); puntClicks.push(now); while(puntClicks.length && now-puntClicks[0]>PUNT_WINDOW) puntClicks.shift();
@@ -1798,33 +1823,33 @@ function puntClick(){ const now=performance.now(); puntClicks.push(now); while(p
 function punt(){
   if(!S || busy || UI.paused) return;
   releasePointers();
-  const fw=[cam.target[0]-CAM.eye[0],0,cam.target[2]-CAM.eye[2]]; const fl=Math.hypot(fw[0],fw[2])||1; const f=[fw[0]/fl,0,fw[2]/fl];
-  const {nN,x,v}=S; let cx=0,cy=0,cz=0,front=-1e9; for(let n=0;n<nN;n++){ cx+=x[n*3];cy+=x[n*3+1];cz+=x[n*3+2]; front=Math.max(front,x[n*3]*f[0]+x[n*3+2]*f[2]); } cx/=nN;cy/=nN;cz/=nN;
-  const c=Math.max(front+0.9, cx*f[0]+cz*f[2]+PUNT_WALL_GAP); // the wall plane: dot(p, f) = c
+  const f=WALL_F; // always kicked toward the back wall; the camera swings round to watch
+  const {nN,x,v}=S; let cx=0,cy=0,cz=0; for(let n=0;n<nN;n++){ cx+=x[n*3];cy+=x[n*3+1];cz+=x[n*3+2]; } cx/=nN;cy/=nN;cz/=nN;
+  const gap=WALL_C-(cx*f[0]+cz*f[2]), vx=PUNT_VX*Math.min(1.3,Math.max(0.35,gap/12)); // scale the kick if it was dragged nearer or farther
   const ax=[f[2],0,-f[0]]; const spin=-6.0; // tumble forward, head over heels
   for(let n=0;n<nN;n++){ const i=n*3; const rx=x[i]-cx, ry=x[i+1]-cy, rz=x[i+2]-cz;
     const wx=ax[1]*rz-ax[2]*ry, wy=ax[2]*rx-ax[0]*rz, wz=ax[0]*ry-ax[1]*rx;
-    v[i]=f[0]*PUNT_VX+wx*spin; v[i+1]=PUNT_VY+wy*spin; v[i+2]=f[2]*PUNT_VX+wz*spin; }
+    v[i]=f[0]*vx+wx*spin; v[i+1]=PUNT_VY+wy*spin; v[i+2]=f[2]*vx+wz*spin; }
   for(const D of drops){ D.v[0]+=f[0]*8; D.v[1]+=10; D.v[2]+=f[2]*8; }
   nodeVmax=PUNT_VMAX;
-  PUNT={f,c,wall:true,t:0,hit:false,minVol:1,maxSpeed:0,still:0,camOff:[cam.target[0]-cx,cam.target[2]-cz],
+  PUNT={f,c:WALL_C,t:0,hit:false,minVol:1,maxSpeed:0,still:0,camOff:[cam.target[0]-cx,cam.target[2]-cz],
     camY0:cam.target[1], cy0:cy, dist0:cam.dist};
 }
 function wallContact(){ // inside a substep: push nodes back out of the wall, with low friction so the splat slides down
-  const {nN,x,xp}=S, f=PUNT.f, c=PUNT.c, mu=0.35; let hits=0;
+  const {nN,x,xp}=S, f=WALL_F, c=WALL_C, mu=0.35; let hits=0;
   for(let n=0;n<nN;n++){ const i=n*3; const d=x[i]*f[0]+x[i+2]*f[2]-c; if(d<=0) continue; hits++;
     x[i]-=f[0]*d; x[i+2]-=f[2]*d;
     const tx=x[i]-xp[i], ty=x[i+1]-xp[i+1], tz=x[i+2]-xp[i+2]; const tn=tx*f[0]+tz*f[2]; const ux=tx-tn*f[0], uz=tz-tn*f[2];
     const tl=Math.hypot(ux,ty,uz); if(tl>0){ const k=Math.min(1,mu*d/tl); x[i]-=ux*k; x[i+1]-=ty*k; x[i+2]-=uz*k; } }
-  if(hits>8 && !PUNT.hit){ PUNT.hit=true; PUNT.hitT=PUNT.t; PUNT.pendingImpact=true; }
+  if(hits>8 && PUNT && !PUNT.hit){ PUNT.hit=true; PUNT.hitT=PUNT.t; PUNT.pendingImpact=true; }
 }
 function puntImpact(){ // once, outside the substeps: drops shaken loose, a short camera shake
   const {nN,x}=S, f=PUNT.f, rnd=Math.random; const near=[];
   for(let n=0;n<nN;n++){ if(x[n*3]*f[0]+x[n*3+2]*f[2]>PUNT.c-0.12) near.push(n); }
-  const k=Math.min(16,near.length);
+  const k=Math.min(22,near.length);
   for(let j=0;j<k;j++){ const n=near[(rnd()*near.length)|0]; const p=[x[n*3]-f[0]*0.08,x[n*3+1]+0.04,x[n*3+2]-f[2]*0.08];
     spawnDrop(p,[-f[0]*(2+rnd()*2.5)+(rnd()-0.5)*3, 1+rnd()*4, -f[2]*(2+rnd()*2.5)+(rnd()-0.5)*3], 0.02+rnd()*0.018); }
-  PUNT.shook=!reducedMotion(); if(PUNT.shook) camShake={t:0,dur:0.6,amp:0.14};
+  PUNT.shook=!reducedMotion(); if(PUNT.shook) camShake={t:0,dur:0.7,amp:0.2};
 }
 function puntUpdate(dt){ // per frame, after the simulation step
   if(!PUNT) return; PUNT.t+=dt;
@@ -1836,6 +1861,7 @@ function puntUpdate(dt){ // per frame, after the simulation step
   const k=1-Math.exp(-dt*(flying?9:3.5)); cx=cx/S.nN+PUNT.camOff[0]; cz=cz/S.nN+PUNT.camOff[1];
   const cyT=PUNT.camY0+Math.max(0,cy/S.nN-PUNT.cy0)*1.0;
   cam.target[0]+=(cx-cam.target[0])*k; cam.target[1]+=(cyT-cam.target[1])*k; cam.target[2]+=(cz-cam.target[2])*k;
+  if(flying){ const dy=Math.atan2(Math.sin(WALL_YAW-cam.yaw),Math.cos(WALL_YAW-cam.yaw)); cam.yaw+=dy*(1-Math.exp(-dt*7)); }
   const dT=PUNT.dist0+(flying?PUNT_PULLBACK:0);
   cam.dist+=(dT-cam.dist)*(1-Math.exp(-dt*(flying?4:1.5)));
   if(PUNT.hit && PUNT.t-PUNT.hitT>0.3) nodeVmax=NODE_VMAX;
