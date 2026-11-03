@@ -1786,10 +1786,11 @@ function renderGL(){
 }
 
 // ================================================================
-//  Easter egg: click or tap the body 5 times quickly (within 1.5 s, no drag) and it gets punted into a wall behind it.
-//  The wall is an invisible collision plane, placed at punt time 2.0 u behind the body, facing the camera, at the backdrop.
+//  Easter egg: click or tap the body 5 times quickly (within 1.5 s, no drag) and it gets punted: kicked up and away in a
+//  high arc into a wall far behind it. The wall is an invisible collision plane, placed at punt time PUNT_WALL_GAP u
+//  behind the body, facing the camera. The camera rises and pulls back to keep the flight and the splat in frame.
 // ================================================================
-const PUNT_CLICKS=5, PUNT_WINDOW=1500, PUNT_VMAX=14, PUNT_WALL_GAP=2.0;
+const PUNT_CLICKS=5, PUNT_WINDOW=1500, PUNT_VMAX=34, PUNT_WALL_GAP=6.5, PUNT_VX=12, PUNT_VY=22, PUNT_PULLBACK=4.5;
 let PUNT=null; const puntClicks=[]; let camShake=null;
 const reducedMotion=()=>!!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 function puntClick(){ const now=performance.now(); puntClicks.push(now); while(puntClicks.length && now-puntClicks[0]>PUNT_WINDOW) puntClicks.shift();
@@ -1800,13 +1801,14 @@ function punt(){
   const fw=[cam.target[0]-CAM.eye[0],0,cam.target[2]-CAM.eye[2]]; const fl=Math.hypot(fw[0],fw[2])||1; const f=[fw[0]/fl,0,fw[2]/fl];
   const {nN,x,v}=S; let cx=0,cy=0,cz=0,front=-1e9; for(let n=0;n<nN;n++){ cx+=x[n*3];cy+=x[n*3+1];cz+=x[n*3+2]; front=Math.max(front,x[n*3]*f[0]+x[n*3+2]*f[2]); } cx/=nN;cy/=nN;cz/=nN;
   const c=Math.max(front+0.9, cx*f[0]+cz*f[2]+PUNT_WALL_GAP); // the wall plane: dot(p, f) = c
-  const ax=[f[2],0,-f[0]]; const spin=-4.0; // tumble forward, head over heels, a little
+  const ax=[f[2],0,-f[0]]; const spin=-6.0; // tumble forward, head over heels
   for(let n=0;n<nN;n++){ const i=n*3; const rx=x[i]-cx, ry=x[i+1]-cy, rz=x[i+2]-cz;
     const wx=ax[1]*rz-ax[2]*ry, wy=ax[2]*rx-ax[0]*rz, wz=ax[0]*ry-ax[1]*rx;
-    v[i]=f[0]*8.5+wx*spin; v[i+1]=6.5+wy*spin; v[i+2]=f[2]*8.5+wz*spin; }
-  for(const D of drops){ D.v[0]+=f[0]*6; D.v[1]+=4; D.v[2]+=f[2]*6; }
+    v[i]=f[0]*PUNT_VX+wx*spin; v[i+1]=PUNT_VY+wy*spin; v[i+2]=f[2]*PUNT_VX+wz*spin; }
+  for(const D of drops){ D.v[0]+=f[0]*8; D.v[1]+=10; D.v[2]+=f[2]*8; }
   nodeVmax=PUNT_VMAX;
-  PUNT={f,c,wall:true,t:0,hit:false,minVol:1,maxSpeed:0,still:0,camOff:[cam.target[0]-cx,cam.target[2]-cz]};
+  PUNT={f,c,wall:true,t:0,hit:false,minVol:1,maxSpeed:0,still:0,camOff:[cam.target[0]-cx,cam.target[2]-cz],
+    camY0:cam.target[1], cy0:cy, dist0:cam.dist};
 }
 function wallContact(){ // inside a substep: push nodes back out of the wall, with low friction so the splat slides down
   const {nN,x,xp}=S, f=PUNT.f, c=PUNT.c, mu=0.35; let hits=0;
@@ -1819,22 +1821,27 @@ function wallContact(){ // inside a substep: push nodes back out of the wall, wi
 function puntImpact(){ // once, outside the substeps: drops shaken loose, a short camera shake
   const {nN,x}=S, f=PUNT.f, rnd=Math.random; const near=[];
   for(let n=0;n<nN;n++){ if(x[n*3]*f[0]+x[n*3+2]*f[2]>PUNT.c-0.12) near.push(n); }
-  const k=Math.min(8,near.length);
+  const k=Math.min(16,near.length);
   for(let j=0;j<k;j++){ const n=near[(rnd()*near.length)|0]; const p=[x[n*3]-f[0]*0.08,x[n*3+1]+0.04,x[n*3+2]-f[2]*0.08];
-    spawnDrop(p,[-f[0]*(1.5+rnd()*1.5)+(rnd()-0.5)*1.5, 1+rnd()*2.5, -f[2]*(1.5+rnd()*1.5)+(rnd()-0.5)*1.5], 0.02+rnd()*0.014); }
-  PUNT.shook=!reducedMotion(); if(PUNT.shook) camShake={t:0,dur:0.45,amp:0.06};
+    spawnDrop(p,[-f[0]*(2+rnd()*2.5)+(rnd()-0.5)*3, 1+rnd()*4, -f[2]*(2+rnd()*2.5)+(rnd()-0.5)*3], 0.02+rnd()*0.018); }
+  PUNT.shook=!reducedMotion(); if(PUNT.shook) camShake={t:0,dur:0.6,amp:0.14};
 }
 function puntUpdate(dt){ // per frame, after the simulation step
   if(!PUNT) return; PUNT.t+=dt;
   if(PUNT.pendingImpact){ PUNT.pendingImpact=false; puntImpact(); }
   const vr=S.curVol/S.totalRest; PUNT.minVol=Math.min(PUNT.minVol,vr);
-  let ms=0, cx=0, cz=0; for(let n=0;n<S.nN;n++){ const i=n*3; ms=Math.max(ms,S.v[i]*S.v[i]+S.v[i+1]*S.v[i+1]+S.v[i+2]*S.v[i+2]); cx+=S.x[i]; cz+=S.x[i+2]; } ms=Math.sqrt(ms); PUNT.maxSpeed=Math.max(PUNT.maxSpeed,ms);
-  // the camera eases after the body so the flight and splat stay in frame (yaw, pitch and distance are kept)
-  const k=1-Math.exp(-dt*3.5); cx=cx/S.nN+PUNT.camOff[0]; cz=cz/S.nN+PUNT.camOff[1];
-  cam.target[0]+=(cx-cam.target[0])*k; cam.target[2]+=(cz-cam.target[2])*k;
-  if(PUNT.t>0.9) nodeVmax=NODE_VMAX;
+  let ms=0, cx=0, cy=0, cz=0; for(let n=0;n<S.nN;n++){ const i=n*3; ms=Math.max(ms,S.v[i]*S.v[i]+S.v[i+1]*S.v[i+1]+S.v[i+2]*S.v[i+2]); cx+=S.x[i]; cy+=S.x[i+1]; cz+=S.x[i+2]; } ms=Math.sqrt(ms); PUNT.maxSpeed=Math.max(PUNT.maxSpeed,ms);
+  // the camera eases after the body, rising with it and pulling back during the flight, so the arc and splat stay in frame
+  const flying=!PUNT.hit || PUNT.t-PUNT.hitT<1.2;
+  const k=1-Math.exp(-dt*(flying?9:3.5)); cx=cx/S.nN+PUNT.camOff[0]; cz=cz/S.nN+PUNT.camOff[1];
+  const cyT=PUNT.camY0+Math.max(0,cy/S.nN-PUNT.cy0)*1.0;
+  cam.target[0]+=(cx-cam.target[0])*k; cam.target[1]+=(cyT-cam.target[1])*k; cam.target[2]+=(cz-cam.target[2])*k;
+  const dT=PUNT.dist0+(flying?PUNT_PULLBACK:0);
+  cam.dist+=(dT-cam.dist)*(1-Math.exp(-dt*(flying?4:1.5)));
+  if(PUNT.hit && PUNT.t-PUNT.hitT>0.3) nodeVmax=NODE_VMAX;
   PUNT.still = ms<0.2 ? PUNT.still+dt : 0;
-  if((PUNT.t>2 && PUNT.still>0.6) || PUNT.t>10) endPunt(); // settled on the table: the wall goes away
+  const camDone=Math.abs(cam.dist-dT)<0.03 && Math.abs(cam.target[1]-PUNT.camY0)<0.02;
+  if((PUNT.t>2 && PUNT.still>0.6 && !flying && camDone) || PUNT.t>12) endPunt(); // settled on the table: the wall goes away
 }
 function endPunt(){ PUNT=null; nodeVmax=NODE_VMAX; camShake=null; }
 function shakeOffset(dt){ if(!camShake) return [0,0,0]; camShake.t+=dt; const q=camShake.t/camShake.dur; if(q>=1){ camShake=null; return [0,0,0]; }
