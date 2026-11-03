@@ -130,6 +130,7 @@ const LATTICE_H = { fine: 0.066, light: 0.09 };
 const MAX_DROPS = 60;
 const GRAB_VMAX = 4.0;          // u/s, how fast the grabbed region can be dragged
 const NODE_VMAX = 9.0;          // u/s, safety cap on node speed after each substep
+let nodeVmax = NODE_VMAX;        // raised to PUNT_VMAX for a moment during a punt
 const SM_ITERS = 1;            // rotation-fit iterations per cell per substep (warm-started from the previous substep)
 
 const COLOURWAYS = [
@@ -671,9 +672,10 @@ function substep(dt){
   for(let n=0;n<nN;n++){ const i=n*3; if(x[i+1]<0){ const pen=-x[i+1]; x[i+1]=0;
       const dx=x[i]-xp[i], dz=x[i+2]-xp[i+2]; const dl=Math.hypot(dx,dz);
       if(dl<muS*pen){ x[i]=xp[i]; x[i+2]=xp[i+2]; } else if(dl>0){ const k=Math.min(1,muK*pen/dl); x[i]-=dx*k; x[i+2]-=dz*k; } } }
-  const idt=1/dt; const vm2=NODE_VMAX*NODE_VMAX;
+  if(PUNT && PUNT.wall) wallContact();
+  const idt=1/dt; const vm2=nodeVmax*nodeVmax;
   for(let n=0;n<nN;n++){ const i=n*3; let a=(x[i]-xp[i])*idt, b=(x[i+1]-xp[i+1])*idt, c=(x[i+2]-xp[i+2])*idt; const s2=a*a+b*b+c*c;
-    if(s2>vm2){ const k=NODE_VMAX/Math.sqrt(s2); a*=k; b*=k; c*=k; } v[i]=a; v[i+1]=b; v[i+2]=c; }
+    if(s2>vm2){ const k=nodeVmax/Math.sqrt(s2); a*=k; b*=k; c*=k; } v[i]=a; v[i+1]=b; v[i+2]=c; }
   // edge damping: remove a share of relative velocity along each lattice edge
   const kd=UI.damp*0.5; if(kd>0){ const E=S.edges, nE=S.nE;
     for(let e=0;e<nE;e++){ const a=E[e*2]*3, b=E[e*2+1]*3; let nx=x[b]-x[a], ny=x[b+1]-x[a+1], nz=x[b+2]-x[a+2]; const l=Math.sqrt(nx*nx+ny*ny+nz*nz); if(l<1e-9) continue; nx/=l;ny/=l;nz/=l;
@@ -803,9 +805,10 @@ function dropsStep(dt){
     const tx=rdx-rn*nx, ty=rdy-rn*ny, tz=rdz-rn*nz; const k=Math.min(1,1.4*pen/(Math.hypot(tx,ty,tz)+1e-9)); // gummy on gummy: high friction
     D.x[0]-=tx*k; D.x[1]-=ty*k; D.x[2]-=tz*k;
   }
-  // floor and velocities
+  // floor, the punt wall, and velocities
   for(const D of drops){
     if(D.x[1]<D.r){ D.x[1]=D.r; D.contact=true; D.floor=true; }
+    if(PUNT && PUNT.wall){ const f=PUNT.f, d=D.x[0]*f[0]+D.x[2]*f[2]-(PUNT.c-D.r); if(d>0){ D.x[0]-=f[0]*d; D.x[2]-=f[2]*d; D.contact=true; } }
     if(D.grabbed){ for(let a=0;a<3;a++) D.v[a]=(D.x[a]-D.xp[a])/dt; const sp=Math.hypot(...D.v); if(sp>7){ for(let a=0;a<3;a++) D.v[a]*=7/sp; } continue; }
     for(let a=0;a<3;a++) D.v[a]=(D.x[a]-D.xp[a])/dt;
     if(D.floor){
@@ -1334,20 +1337,23 @@ function ensureTargets(){
 
 // ---------- camera and per-frame uniforms ----------
 const LIGHT_DIR=norm3([-0.50,1.0,-0.38]);
+let CAM_SHAKE=[0,0,0];
 function camState(){
   const asp=R.W/R.H; const hf=2*Math.atan(Math.tan(cam.fov/2)*asp);
   const fit=Math.max(cam.dist, 1.24/Math.tan(Math.min(hf,cam.fov*1.6)/2)); // portrait only (used when the aspect is under 1)
   const d=asp<1? fit : cam.dist;
-  const cp=Math.cos(cam.pitch); const eye=[cam.target[0]+d*cp*Math.sin(cam.yaw), cam.target[1]+d*Math.sin(cam.pitch), cam.target[2]+d*cp*Math.cos(cam.yaw)];
-  const view=M4.lookAt(eye,cam.target,[0,1,0]); const proj=M4.persp(cam.fov,asp,0.05,60); const vp=M4.mul(proj,view);
+  const sh=CAM_SHAKE; const tg=[cam.target[0]+sh[0],cam.target[1]+sh[1],cam.target[2]+sh[2]];
+  const cp=Math.cos(cam.pitch); const eye=[tg[0]+d*cp*Math.sin(cam.yaw), tg[1]+d*Math.sin(cam.pitch), tg[2]+d*cp*Math.cos(cam.yaw)];
+  const view=M4.lookAt(eye,tg,[0,1,0]); const proj=M4.persp(cam.fov,asp,0.05,60); const vp=M4.mul(proj,view);
   return {eye,view,proj,vp,ivp:M4.inv(vp),asp};
 }
 let CAM=null;
 function buildUniforms(){
   CAM=camState(); const C=COLOURWAYS[UI.colour];
-  const Lb=SPEC.light, lt=Lb.t; const le=[lt[0]+LIGHT_DIR[0]*4,lt[1]+LIGHT_DIR[1]*4,lt[2]+LIGHT_DIR[2]*4];
+  const Lb=SPEC.light; const ox=cam.target[0]-SPEC.cam.target[0], oz=cam.target[2]-SPEC.cam.target[2]; // non-zero only after a punt moved the camera
+  const lt=[Lb.t[0]+ox,Lb.t[1],Lb.t[2]+oz]; const le=[lt[0]+LIGHT_DIR[0]*4,lt[1]+LIGHT_DIR[1]*4,lt[2]+LIGHT_DIR[2]*4];
   const lview=M4.lookAt(le,lt,[0,1,0]); const lproj=M4.ortho(-Lb.hw,Lb.hw,-Lb.hh,Lb.hh,0.5,8.0); const lvp=M4.mul(lproj,lview);
-  const aview=M4.lookAt([-0.05,-2,0],[-0.05,0,0],[0,0,1]); const aproj=M4.ortho(-1.7,1.7,-1.7,1.7,0.5,4.0); const avp=M4.mul(aproj,aview);
+  const aview=M4.lookAt([-0.05+ox,-2,oz],[-0.05+ox,0,oz],[0,0,1]); const aproj=M4.ortho(-1.7,1.7,-1.7,1.7,0.5,4.0); const avp=M4.mul(aproj,aview);
   const u=new Float32Array(128); u.set(CAM.vp,0); u.set(CAM.view,16); u.set(lvp,32); u.set(avp,48);
   const sig=C.trans.map(t=>-Math.log(t)/0.13);
   u.set([...CAM.eye,performance.now()/1000],64); u.set([...LIGHT_DIR,3.1],68); u.set([...sig,7.5],72); u.set([...C.tint,1.0],76);
@@ -1780,6 +1786,61 @@ function renderGL(){
 }
 
 // ================================================================
+//  Easter egg: click or tap the body 5 times quickly (within 1.5 s, no drag) and it gets punted into a wall behind it.
+//  The wall is an invisible collision plane, placed at punt time 2.0 u behind the body, facing the camera, at the backdrop.
+// ================================================================
+const PUNT_CLICKS=5, PUNT_WINDOW=1500, PUNT_VMAX=14, PUNT_WALL_GAP=2.0;
+let PUNT=null; const puntClicks=[]; let camShake=null;
+const reducedMotion=()=>!!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+function puntClick(){ const now=performance.now(); puntClicks.push(now); while(puntClicks.length && now-puntClicks[0]>PUNT_WINDOW) puntClicks.shift();
+  if(puntClicks.length>=PUNT_CLICKS){ puntClicks.length=0; punt(); } }
+function punt(){
+  if(!S || busy || UI.paused) return;
+  releasePointers();
+  const fw=[cam.target[0]-CAM.eye[0],0,cam.target[2]-CAM.eye[2]]; const fl=Math.hypot(fw[0],fw[2])||1; const f=[fw[0]/fl,0,fw[2]/fl];
+  const {nN,x,v}=S; let cx=0,cy=0,cz=0,front=-1e9; for(let n=0;n<nN;n++){ cx+=x[n*3];cy+=x[n*3+1];cz+=x[n*3+2]; front=Math.max(front,x[n*3]*f[0]+x[n*3+2]*f[2]); } cx/=nN;cy/=nN;cz/=nN;
+  const c=Math.max(front+0.9, cx*f[0]+cz*f[2]+PUNT_WALL_GAP); // the wall plane: dot(p, f) = c
+  const ax=[f[2],0,-f[0]]; const spin=-4.0; // tumble forward, head over heels, a little
+  for(let n=0;n<nN;n++){ const i=n*3; const rx=x[i]-cx, ry=x[i+1]-cy, rz=x[i+2]-cz;
+    const wx=ax[1]*rz-ax[2]*ry, wy=ax[2]*rx-ax[0]*rz, wz=ax[0]*ry-ax[1]*rx;
+    v[i]=f[0]*8.5+wx*spin; v[i+1]=6.5+wy*spin; v[i+2]=f[2]*8.5+wz*spin; }
+  for(const D of drops){ D.v[0]+=f[0]*6; D.v[1]+=4; D.v[2]+=f[2]*6; }
+  nodeVmax=PUNT_VMAX;
+  PUNT={f,c,wall:true,t:0,hit:false,minVol:1,maxSpeed:0,still:0,camOff:[cam.target[0]-cx,cam.target[2]-cz]};
+}
+function wallContact(){ // inside a substep: push nodes back out of the wall, with low friction so the splat slides down
+  const {nN,x,xp}=S, f=PUNT.f, c=PUNT.c, mu=0.35; let hits=0;
+  for(let n=0;n<nN;n++){ const i=n*3; const d=x[i]*f[0]+x[i+2]*f[2]-c; if(d<=0) continue; hits++;
+    x[i]-=f[0]*d; x[i+2]-=f[2]*d;
+    const tx=x[i]-xp[i], ty=x[i+1]-xp[i+1], tz=x[i+2]-xp[i+2]; const tn=tx*f[0]+tz*f[2]; const ux=tx-tn*f[0], uz=tz-tn*f[2];
+    const tl=Math.hypot(ux,ty,uz); if(tl>0){ const k=Math.min(1,mu*d/tl); x[i]-=ux*k; x[i+1]-=ty*k; x[i+2]-=uz*k; } }
+  if(hits>8 && !PUNT.hit){ PUNT.hit=true; PUNT.hitT=PUNT.t; PUNT.pendingImpact=true; }
+}
+function puntImpact(){ // once, outside the substeps: drops shaken loose, a short camera shake
+  const {nN,x}=S, f=PUNT.f, rnd=Math.random; const near=[];
+  for(let n=0;n<nN;n++){ if(x[n*3]*f[0]+x[n*3+2]*f[2]>PUNT.c-0.12) near.push(n); }
+  const k=Math.min(8,near.length);
+  for(let j=0;j<k;j++){ const n=near[(rnd()*near.length)|0]; const p=[x[n*3]-f[0]*0.08,x[n*3+1]+0.04,x[n*3+2]-f[2]*0.08];
+    spawnDrop(p,[-f[0]*(1.5+rnd()*1.5)+(rnd()-0.5)*1.5, 1+rnd()*2.5, -f[2]*(1.5+rnd()*1.5)+(rnd()-0.5)*1.5], 0.02+rnd()*0.014); }
+  PUNT.shook=!reducedMotion(); if(PUNT.shook) camShake={t:0,dur:0.45,amp:0.06};
+}
+function puntUpdate(dt){ // per frame, after the simulation step
+  if(!PUNT) return; PUNT.t+=dt;
+  if(PUNT.pendingImpact){ PUNT.pendingImpact=false; puntImpact(); }
+  const vr=S.curVol/S.totalRest; PUNT.minVol=Math.min(PUNT.minVol,vr);
+  let ms=0, cx=0, cz=0; for(let n=0;n<S.nN;n++){ const i=n*3; ms=Math.max(ms,S.v[i]*S.v[i]+S.v[i+1]*S.v[i+1]+S.v[i+2]*S.v[i+2]); cx+=S.x[i]; cz+=S.x[i+2]; } ms=Math.sqrt(ms); PUNT.maxSpeed=Math.max(PUNT.maxSpeed,ms);
+  // the camera eases after the body so the flight and splat stay in frame (yaw, pitch and distance are kept)
+  const k=1-Math.exp(-dt*3.5); cx=cx/S.nN+PUNT.camOff[0]; cz=cz/S.nN+PUNT.camOff[1];
+  cam.target[0]+=(cx-cam.target[0])*k; cam.target[2]+=(cz-cam.target[2])*k;
+  if(PUNT.t>0.9) nodeVmax=NODE_VMAX;
+  PUNT.still = ms<0.2 ? PUNT.still+dt : 0;
+  if((PUNT.t>2 && PUNT.still>0.6) || PUNT.t>10) endPunt(); // settled on the table: the wall goes away
+}
+function endPunt(){ PUNT=null; nodeVmax=NODE_VMAX; camShake=null; }
+function shakeOffset(dt){ if(!camShake) return [0,0,0]; camShake.t+=dt; const q=camShake.t/camShake.dur; if(q>=1){ camShake=null; return [0,0,0]; }
+  const a=camShake.amp*(1-q)*(1-q), w=camShake.t*55; return [Math.sin(w)*a, Math.sin(w*1.31+1)*a*0.7, Math.cos(w*0.87)*a]; }
+
+// ================================================================
 //  Interaction
 // ================================================================
 function rayFrom(ev){ const r=canvas.getBoundingClientRect(); const nx=((ev.clientX-r.left)/r.width)*2-1, ny=1-((ev.clientY-r.top)/r.height)*2;
@@ -1798,13 +1859,14 @@ function pickBody(ray){
 }
 function pickDrop(ray){ let best=null, bt=1e9; for(const D of drops){ const oc=[ray.o[0]-D.x[0],ray.o[1]-D.x[1],ray.o[2]-D.x[2]]; const b=dot3(oc,ray.d); const c=dot3(oc,oc)-(D.r*1.35)**2; const h=b*b-c; if(h<0) continue; const t=-b-Math.sqrt(h); if(t>0&&t<bt){bt=t;best=D;} } return best?{D:best,t:bt}:null; }
 function planeHit(ray,p0,n){ const den=dot3(ray.d,n); if(Math.abs(den)<1e-6) return null; const t=dot3([p0[0]-ray.o[0],p0[1]-ray.o[1],p0[2]-ray.o[2]],n)/den; return t>0?[ray.o[0]+ray.d[0]*t,ray.o[1]+ray.d[1]*t,ray.o[2]+ray.d[2]*t]:null; }
-const pointers=new Map(); let orbit=null; let twoFinger=null; let pinch=null;
+const pointers=new Map(); let orbit=null; let twoFinger=null; let pinch=null; let tapStart=null;
 function camFwd(){ return norm3([cam.target[0]-CAM.eye[0],cam.target[1]-CAM.eye[1],cam.target[2]-CAM.eye[2]]); }
 canvas.addEventListener('pointerdown',ev=>{
   if(!S||!CAM||busy) return;
   const mouse=ev.pointerType==='mouse';
   if(mouse && ev.button!==0) return; // only the left button does anything; right click is ignored (its menu is suppressed)
   canvas.setPointerCapture(ev.pointerId); pointers.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+  if(pointers.size>1) tapStart=null;
   if(pointers.size===2 && (GRAB.active||GRAB.drop)){ const [a,b]=[...pointers.values()]; twoFinger={ang:Math.atan2(b.y-a.y,b.x-a.x), base:GRAB.twist}; return; }
   if(pointers.size===2){ const [a,b]=[...pointers.values()]; pinch={d:Math.hypot(b.x-a.x,b.y-a.y)||1, dist:cam.dist}; orbit=null; return; } // two fingers, nothing held: pinch zooms
   if(pointers.size>1) return;
@@ -1817,7 +1879,8 @@ canvas.addEventListener('pointerdown',ev=>{
     for(let n=0;n<S.nN;n++){ const dx=x[n*3]-hit[0],dy=x[n*3+1]-hit[1],dz=x[n*3+2]-hit[2]; const d=Math.sqrt(dx*dx+dy*dy+dz*dz); if(d<R0){ const k=1-d/R0; nodes.push(n); wts.push(Math.max(0.05,k*k)); offs.push(dx,dy,dz); } }
     if(!nodes.length) return;
     GRAB.nodes=Int32Array.from(nodes); GRAB.wts=Float64Array.from(wts); GRAB.offs=Float64Array.from(offs);
-    GRAB.hit0=hit; GRAB.target=[...hit]; GRAB.desired=[...hit]; GRAB.plane=hit; GRAB.fwd=fwd; GRAB.axis=fwd; GRAB.twist=0; GRAB.active=true; canvas.classList.add('dragging'); return;
+    GRAB.hit0=hit; GRAB.target=[...hit]; GRAB.desired=[...hit]; GRAB.plane=hit; GRAB.fwd=fwd; GRAB.axis=fwd; GRAB.twist=0; GRAB.active=true; canvas.classList.add('dragging');
+    tapStart={id:ev.pointerId,x:ev.clientX,y:ev.clientY,t:performance.now()}; return;
   }
   // left drag (or one finger) on empty table orbits the camera
   orbit={x:ev.clientX,y:ev.clientY,yaw:cam.yaw,pitch:cam.pitch}; canvas.classList.add('orbiting');
@@ -1833,7 +1896,9 @@ canvas.addEventListener('pointermove',ev=>{
     GRAB.desired=[GRAB.hit0[0]+dx*s,GRAB.hit0[1]+dy*s,GRAB.hit0[2]+dz*s]; return; }
   if(orbit){ cam.yaw=orbit.yaw-(ev.clientX-orbit.x)*0.006; cam.pitch=clamp(orbit.pitch+(ev.clientY-orbit.y)*0.004,0.06,1.25); }
 });
-function endPointer(ev){ pointers.delete(ev.pointerId); if(pointers.size<2) twoFinger=null; if(pointers.size>0) return; pinch=null;
+function endPointer(ev){
+  if(tapStart && tapStart.id===ev.pointerId){ const still=Math.hypot(ev.clientX-tapStart.x,ev.clientY-tapStart.y)<8, quick=performance.now()-tapStart.t<300; tapStart=null; if(ev.type==='pointerup' && still && quick && pointers.size===1) puntClick(); }
+  pointers.delete(ev.pointerId); if(pointers.size<2) twoFinger=null; if(pointers.size>0) return; pinch=null;
   if(GRAB.drop){ GRAB.drop.grabbed=false; GRAB.drop=null; } GRAB.active=false; orbit=null; canvas.classList.remove('dragging','orbiting'); }
 canvas.addEventListener('pointerup',endPointer); canvas.addEventListener('pointercancel',endPointer);
 canvas.addEventListener('contextmenu',ev=>ev.preventDefault());
@@ -1861,7 +1926,7 @@ function processSneeze(dt){
     const d=norm3([ax[0]+q.spread[0],ax[1]+q.spread[1],ax[2]+q.spread[2]]); const off=q.r+0.035;
     spawnDrop([no[0]+d[0]*off,no[1]+d[1]*off,no[2]+d[2]*off],[d[0]*q.sp,d[1]*q.sp,d[2]*q.sp],q.r); }
 }
-function resetSim(){ if(!S) return; S.x.set(S.X0); S.xp.set(S.X0); S.v.fill(0); S.cellQuat.fill(0); for(let c=0;c<S.nC;c++) S.cellQuat[c*4+3]=1; drops=[]; sneezeQueue=[]; GRAB.active=false; GRAB.drop=null; computeRenderData(); }
+function resetSim(){ if(!S) return; endPunt(); puntClicks.length=0; cam.target=[...SPEC.cam.target]; S.x.set(S.X0); S.xp.set(S.X0); S.v.fill(0); S.cellQuat.fill(0); for(let c=0;c<S.nC;c++) S.cellQuat[c*4+3]=1; drops=[]; sneezeQueue=[]; GRAB.active=false; GRAB.drop=null; computeRenderData(); }
 
 // ================================================================
 //  UI wiring
@@ -1891,7 +1956,7 @@ function releasePointers(){ for(const id of pointers.keys()){ try{ canvas.releas
   if(GRAB.drop){ GRAB.drop.grabbed=false; GRAB.drop=null; } GRAB.active=false; canvas.classList.remove('dragging','orbiting'); }
 async function setSpecies(i){
   if(busy || i===UI.species) return;
-  busy=true; releasePointers(); sneezeQueue=[]; drops=[];
+  busy=true; releasePointers(); endPunt(); puntClicks.length=0; sneezeQueue=[]; drops=[];
   const btns=[...$('species').children]; btns.forEach(b=>b.disabled=true);
   const L=$('loading'); L.textContent='Casting the '+SPECIES[i].name; L.classList.add('over'); L.hidden=false; await tick();
   try{ useSpecies(i); await buildSpecimen(); rebuildLattice(); }
@@ -1927,8 +1992,9 @@ function frame(now){
     while(acc>=1/HZ-1e-4 && steps<2){ acc-=1/HZ; steps++;
       const dt=(UI.slow?0.25:1)/HZ; processSneeze(dt); cellBoxes(); const sdt=dt/SUBSTEPS; for(let s=0;s<SUBSTEPS;s++) substep(sdt); }
     if(acc>1/HZ) acc=0;
-    if(steps){ computeRenderData(); simAcc+=performance.now()-t0; simN+=steps; }
+    if(steps){ computeRenderData(); simAcc+=performance.now()-t0; simN+=steps; puntUpdate(steps/HZ); }
   } else acc=0;
+  CAM_SHAKE=shakeOffset(dtReal);
   RND.render();
   uiTimer+=dtReal;
   if(uiTimer>0.25){ uiTimer=0; STATS.simMs=simN?simAcc/simN:STATS.simMs; STATS.frameMs=frameAcc/frameN*1000; STATS.fps=1000/STATS.frameMs; simAcc=0;simN=0;frameAcc=0;frameN=0;
@@ -1965,7 +2031,7 @@ async function main(){
   $('loading').hidden=true; startT=performance.now(); last=performance.now(); busy=false;
   requestAnimationFrame(frame);
 }
-window.__stego={ get S(){return S;}, get drops(){return drops;}, STATS, UI, sneeze, resetSim, cam, GRAB, rebuildLattice, setSpecies, setPanel, SPECIES, QUAL, sdf:(x,y,z)=>sdf(x,y,z), sdfMilk:(x,y,z)=>sdfMilk(x,y,z), get renderer(){ return RND&&RND.name; }, get substeps(){ return SUBSTEPS; }, get species(){ return SPEC.id; }, FRAME_LOG,
+window.__stego={ get S(){return S;}, get drops(){return drops;}, STATS, UI, sneeze, resetSim, cam, GRAB, rebuildLattice, setSpecies, setPanel, SPECIES, QUAL, get punt(){ return PUNT; }, doPunt:()=>punt(), get camShake(){ return camShake; }, sdf:(x,y,z)=>sdf(x,y,z), sdfMilk:(x,y,z)=>sdfMilk(x,y,z), get renderer(){ return RND&&RND.name; }, get substeps(){ return SUBSTEPS; }, get species(){ return SPEC.id; }, FRAME_LOG,
   maxDisp(){ let m=0; for(let n=0;n<S.nN;n++){ const d=Math.hypot(S.x[n*3]-S.X0[n*3],S.x[n*3+1]-S.X0[n*3+1],S.x[n*3+2]-S.X0[n*3+2]); if(d>m) m=d; } return m; },
   hasNaN(){ for(let i=0;i<S.x.length;i++) if(!Number.isFinite(S.x[i])) return true; return false; },
   maxSpeed(){ let m=0; for(let n=0;n<S.nN;n++){ m=Math.max(m,Math.hypot(S.v[n*3],S.v[n*3+1],S.v[n*3+2])); } return m; },
