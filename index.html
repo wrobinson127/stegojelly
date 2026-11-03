@@ -46,7 +46,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .sp small{font-size:11px;color:var(--ink-3)}
 .sp[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .sp:disabled{opacity:.55;cursor:progress}
-.swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .sw{appearance:none;border:1px solid var(--rule);background:#f7f5f0;border-radius:4px;padding:8px 6px 7px;font:inherit;font-size:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--ink)}
 .sw span.chip{width:30px;height:18px;border-radius:9px;border:1px solid rgba(0,0,0,.15)}
 .sw[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
@@ -67,6 +67,7 @@ button.act:active{transform:translateY(1px)}
 .fallback h2{font-family:var(--serif);font-weight:400;font-size:26px;margin:0}
 .fallback p{max-width:520px;margin:0;font-size:14px;line-height:1.5}
 .fallback .detail{font-family:var(--mono);font-size:11px;opacity:.75}
+@media (max-height:900px){ .sec{padding:8px 0 9px} .sp{padding:6px 10px} .species{gap:4px} .sw{padding:6px 4px 5px;gap:4px} .slider{margin-bottom:4px} button.act{padding:8px} .keys{padding-top:8px} }
 @media (max-width:480px){ .title{left:calc(12px + env(safe-area-inset-left));top:calc(12px + env(safe-area-inset-top))} #reset{right:calc(12px + env(safe-area-inset-right));top:calc(12px + env(safe-area-inset-top))} #paneltoggle{right:calc(12px + env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom))} .panel{right:calc(12px + env(safe-area-inset-right));bottom:calc(58px + env(safe-area-inset-bottom));max-width:calc(100vw - 24px)} }
 </style>
 </head>
@@ -134,6 +135,8 @@ const SM_ITERS = 1;            // rotation-fit iterations per cell per substep (
 const COLOURWAYS = [
   { id:'cycad', name:'Cycad', trans:[0.60,0.84,0.38], tint:[0.42,0.74,0.24], milk:[0.94,0.91,0.80], accent:'#5f8a3a', accentLt:'#cfe6a8', chip:'linear-gradient(90deg,#8fbf55 50%,#efe9d6 50%)' },
   { id:'amber', name:'Amber', trans:[0.93,0.68,0.30], tint:[0.95,0.58,0.18], milk:[0.97,0.94,0.87], accent:'#b5711b', accentLt:'#f5d394', chip:'linear-gradient(90deg,#e1a043 50%,#f4efe4 50%)' },
+  { id:'mottle', name:'Mottled', trans:[0.66,0.24,0.20], tint:[0.55,0.07,0.05], milk:[0.97,0.95,0.92], accent:'#8a2a1f', accentLt:'#f2b8a8', chip:'linear-gradient(90deg,#7a1e1a 0 45%,#f0a830 45% 72%,#f3efe8 72%)',
+    blotch:{trans:[0.97,0.70,0.26], tint:[1.0,0.60,0.10]} }, // deep maroon with yellow-orange blotches over a white milky layer
   { id:'plum',  name:'Plum',  trans:[0.74,0.40,0.66], tint:[0.70,0.24,0.56], milk:[0.95,0.90,0.93], accent:'#8a3a6f', accentLt:'#efbde0', chip:'linear-gradient(90deg,#a95a90 50%,#f1e7ee 50%)' },
 ];
 
@@ -403,6 +406,62 @@ function sdfPlesio(px,py,pz){
   return d;
 }
 
+// Ellipsoid SDF (approximate, exact on the surface), used by the two frogs
+function ellDist(px,py,pz,c,r){ const x=(px-c[0])/r[0], y=(py-c[1])/r[1], z=(pz-c[2])/r[2]; const k0=Math.sqrt(x*x+y*y+z*z);
+  const k1=Math.sqrt(x*x/(r[0]*r[0])+y*y/(r[1]*r[1])+z*z/(r[2]*r[2])); return k1<1e-9? -Math.min(r[0],r[1],r[2]) : k0*(k0-1)/k1; }
+// Rain frog: a near-round dome, wider than tall, sitting flat; stubby front feet peeking out at the base, no visible back legs;
+// small heavy-lidded eyes at the front of the dome under a brow ridge; a wide flat frown; pale underside. Very soft (stress ball).
+const RAIN_CP = [ // only used for the shader's skin relief and the milky line; the dome itself is two ellipsoids (below)
+  [-0.48, 0.150, 0.180, 0.150],
+  [-0.38, 0.270, 0.380, 0.270],
+  [-0.16, 0.330, 0.470, 0.330],
+  [ 0.08, 0.330, 0.470, 0.330],
+  [ 0.28, 0.300, 0.410, 0.300],
+  [ 0.42, 0.240, 0.300, 0.240],
+  [ 0.51, 0.160, 0.170, 0.160],
+];
+const RF_FEET=[]; for(const s of [-1,1]){ RF_FEET.push(makeCone([0.36,0.05,0.22*s],[0.48,0.026,0.26*s],0.060,0.046)); }
+const RF_BROWS=[]; for(const s of [-1,1]) RF_BROWS.push(makeCone([0.29,0.458,0.22*s],[0.40,0.448,0.08*s],0.058,0.048)); // heavy brow hooding the top of each eye
+const RF_MOUTH_Y=0.28, RF_HEAD_X0=0.28;
+// dome: an ellipsoid sunk below the table so it sits flat and wide; a smaller one makes the blunt face
+const RF_DOME=[[-0.04,0.18,0],[0.48,0.44,0.46]], RF_FACE=[[0.20,0.20,0],[0.24,0.25,0.34]];
+function sdfRain(px,py,pz){
+  const db=smin(ellDist(px,py,pz,RF_DOME[0],RF_DOME[1]), ellDist(px,py,pz,RF_FACE[0],RF_FACE[1]), 0.10);
+  let df=1e9; for(const c of RF_FEET){ const d=coneDist(c,px,py,pz); if(d<df) df=d; }
+  let dbr=1e9; if(px>0.3 && py>0.3){ for(const c of RF_BROWS){ const d=coneDist(c,px,py,pz); if(d<dbr) dbr=d; } }
+  let d=smin(db,df,0.05); d=smin(d,dbr,0.045);
+  let dm=smax(d+MILK_INSET, py-wavyFlankY(px,0.15,RF_HEAD_X0,-0.45), 0.02); dm=smax(dm, 0.024-py, 0.01); dm=smax(dm, px-0.40, 0.05); SDF_MILK=dm; // pale underside, kept back from the chin
+  d=smax(d,-py,0.012);
+  SDF_REGION = df<db-0.01 ? 3 : 0;
+  return d;
+}
+// Frog: cheerful and chunky, sitting upright and squat. A big rounded head merged into a pear-shaped body,
+// large bead eyes on bumps at the top front of the head, a wide gentle smile, small front feet together at the front,
+// haunches at the sides with folded back feet.
+const GF_CP = [
+  [-0.42, 0.22, 0.30, 0.20],
+  [-0.10, 0.33, 0.44, 0.32],
+  [ 0.18, 0.38, 0.40, 0.28],
+  [ 0.36, 0.40, 0.28, 0.18],
+];
+const GF={ body:[[-0.02,0.24,0],[0.38,0.26,0.44]], head:[[0.0,0.46,0],[0.34,0.24,0.40]],
+  bumps:[[0.10,0.64,0.17],[0.10,0.64,-0.17]], bumpR:0.10,
+  haunch:[[[-0.14,0.15,0.36],[0.24,0.15,0.13]],[[-0.14,0.15,-0.36],[0.24,0.15,0.13]]] };
+const GF_FEET=[]; for(const s of [-1,1]){ GF_FEET.push(makeCone([0.26,0.12,0.09*s],[0.40,0.03,0.11*s],0.065,0.048)); GF_FEET.push(makeCone([-0.10,0.05,0.45*s],[0.14,0.032,0.48*s],0.065,0.046)); }
+const GF_MOUTH_Y=0.43, GF_HEAD_X0=0.25;
+function sdfGreen(px,py,pz){
+  const db=ellDist(px,py,pz,GF.body[0],GF.body[1]), dh=ellDist(px,py,pz,GF.head[0],GF.head[1]);
+  let d=smin(db,dh,0.12);
+  for(const b of GF.bumps) d=smin(d,Math.hypot(px-b[0],py-b[1],pz-b[2])-GF.bumpR,0.06);
+  for(const h of GF.haunch) d=smin(d,ellDist(px,py,pz,h[0],h[1]),0.07);
+  let df=1e9; for(const c of GF_FEET){ const v=coneDist(c,px,py,pz); if(v<df) df=v; }
+  d=smin(d,df,0.04);
+  let dm=smax(d+MILK_INSET, py-(0.27+0.025*Math.sin(px*14.0+0.8)+0.05*smooth(0.1,0.35,px)), 0.02); dm=smax(dm, 0.024-py, 0.01); SDF_MILK=dm;
+  d=smax(d,-py,0.012);
+  SDF_REGION = df<d+0.005 ? 3 : 0;
+  return d;
+}
+
 // ================================================================
 //  Species table. Everything species-specific lives here.
 // ================================================================
@@ -425,6 +484,16 @@ const SPECIES=[
     eye:[0.948,0.124,0.013], snout:[1.0,0.095], tail:[-0.95,0.03], nostril:[-0.035,0.11,0.014], headBack:[0.86,0.10,0], head:[0.96,0.10,0,0.10,0.32], mouth:[PL_MOUTH_Y,PL_HEAD_X0],
     bubbles:[-0.6,0.8,0.05,0.10,0.4], cam:{target:[0.0,0.08,0.0],dist:3.7,pitch:0.62}, light:{t:[-0.02,0.10,0],hw:1.9,hh:1.6},
     stiff:(b)=>[b,0.55,0.72,0.3,Math.min(0.4,b*2.0+0.08)] },
+  { id:'rainfrog', name:'Rain frog', kind:'amphibian', cp:RAIN_CP, win:12, sdf:sdfRain, shader:3, mouthCurve:0.9, pebble:0.18,
+    grid:{ox:-0.62,oy:-0.03,oz:-0.56,lx:1.24,ly:0.76,lz:1.12}, sim:{ox:-0.64,oz:-0.60,lx:1.28,ly:0.76,lz:1.20}, table:[-0.56,0.58],
+    eye:{from:[0.30,0.405,0.14], dir:[1,0.0,0.42], r:0.036, sink:0.45}, snout:[0.30,0.28], tail:[-0.38,0.26], nostril:[-0.03,0.35,0.05], headBack:[0.10,0.33,0], head:[0.40,0.33,0,0.14,0.40], mouth:[RF_MOUTH_Y,RF_HEAD_X0],
+    bubbles:[-0.35,0.55,0.12,0.30,0.5], cam:{target:[0.02,0.2,0.0],dist:3.6,pitch:0.34,yaw:1.15}, light:{t:[0,0.25,0],hw:1.6,hh:1.4},
+    stiff:(b)=>[b*0.8,0.62,0.72,Math.min(0.5,b*3.2+0.06),b] },
+  { id:'frog', name:'Frog', kind:'amphibian', cp:GF_CP, win:12, sdf:sdfGreen, shader:4, mouthCurve:-1.4, pebble:0,
+    grid:{ox:-0.50,oy:-0.03,oz:-0.62,lx:1.04,ly:0.82,lz:1.24}, sim:{ox:-0.52,oz:-0.66,lx:1.08,ly:0.82,lz:1.32}, table:[-0.44,0.48],
+    eye:{from:[0.10,0.65,0.17], dir:[1,0.25,0.35], r:0.068, sink:0.18}, snout:[0.10,0.43], tail:[-0.25,0.24], nostril:[-0.03,0.50,0.05], headBack:[-0.10,0.46,0], head:[0.05,0.48,0,0.18,0.42], mouth:[GF_MOUTH_Y,GF_HEAD_X0],
+    bubbles:[-0.25,0.4,0.15,0.4,0.4], cam:{target:[0.05,0.28,0.0],dist:3.4,pitch:0.30,yaw:1.15}, light:{t:[0,0.3,0],hw:1.4,hh:1.4},
+    stiff:(b)=>[b*0.9,0.62,0.72,Math.min(0.5,b*3.2+0.06),b] },
 ];
 let SPEC=SPECIES[0];
 function sdf(px,py,pz){ return SPEC.sdf(px,py,pz); }
@@ -805,6 +874,9 @@ struct Globals {
   cam: vec4f, light: vec4f, sigma: vec4f, tint: vec4f, milk: vec4f, screen: vec4f, misc: vec4f,
   spec: vec4f,  // species id, mouth line y, spine table x0, spine table dx
   spec2: vec4f, // x where the head starts, snout tip x, unused, unused
+  extra: vec4f, // mouth curvature (frown > 0, smile < 0), pebble strength, mottled colourway on, unused
+  blotT: vec4f, // blotch tint
+  blotS: vec4f, // blotch absorption
 };
 struct Inst { pr: vec4f, q: vec4f, k: vec4f };
 @group(0) @binding(0) var<uniform> G: Globals;
@@ -957,13 +1029,19 @@ fn reliefGeneric(p: vec3f) -> vec2f {
   var h = 0.0;
   let hx0 = G.spec2.x; let snx = G.spec2.y;
   let mm = smoothstep(hx0, hx0 + 0.05, p.x);
-  let g = exp(-pow((p.y - G.spec.y) / 0.0050, 2.0)) * mm * smoothstep(0.15, 0.45, rz + smoothstep(snx - 0.06, snx, p.x));
+  let g = exp(-pow((p.y - (G.spec.y - G.extra.x * p.z * p.z)) / 0.0050, 2.0)) * mm * smoothstep(0.15, 0.45, rz + smoothstep(snx - 0.06, snx, p.x));
   h -= g * 1.5;
   let sk = (1.0 - smoothstep(hx0 - 0.10, hx0 - 0.02, p.x)) * smoothstep(0.02, 0.07, p.y) * smoothstep(0.25, 0.65, rz + max(ry, 0.0));
-  if (sk > 0.001) { let vv = voronoi(vec2f(p.x * 26.0 + sign(p.z) * 3.1 + p.z * 6.0, p.y * 28.0 + p.z * 11.0)); let dome = 1.0 - smoothstep(0.0, 0.5, vv); h += sk * dome * dome * 0.32; }
+  if (sk > 0.001) { let vv = voronoi(vec2f(p.x * 26.0 + sign(p.z) * 3.1 + p.z * 6.0, p.y * 28.0 + p.z * 11.0)); let dome = 1.0 - smoothstep(0.0, 0.5, vv); h += sk * dome * dome * 0.32 * G.extra.y; }
   return vec2f(h, g);
 }
 fn relief(p: vec3f) -> vec2f { if (G.spec.x < 0.5) { return reliefStego(p); } return reliefGeneric(p); }
+// mottled colourway: soft blotches in rest space, so they stretch with the jelly
+fn blotch(p: vec3f) -> f32 {
+  let q = p * vec3f(9.0, 11.0, 9.0);
+  let n = sin(q.x + 2.1 * sin(q.z * 0.9 + q.y * 1.3)) * sin(q.z * 1.1 + 1.7 * sin(q.x * 0.8 - q.y)) + 0.35 * sin(q.y * 2.3 + q.x * 1.7);
+  return smoothstep(0.12, 0.32, n);
+}
 
 // ---------- opaque pass ----------
 @fragment fn fsFloor(in: VOut) -> MRT {
@@ -1040,16 +1118,18 @@ fn relief(p: vec3f) -> vec2f { if (G.spec.x < 0.5) { return reliefStego(p); } re
   let k = 0.085 * smoothstep(0.0, 0.25, thick) / max(in.lin * 0.32, 0.6);
   let ruv = clamp(uv + vec2f(-nv.x, nv.y) * k * vec2f(G.screen.y * G.screen.z, 1.0), vec2f(0.001), vec2f(0.999));
   var bg = textureSampleLevel(opaqueTex, linSamp, ruv, 0.0).rgb;
-  let absorb = exp(-G.sigma.xyz * (thick + 0.045));
+  var sig = G.sigma.xyz; var tnt = G.tint.xyz;
+  if (G.extra.z > 0.5 && !isDrop) { let bm = blotch(in.rp); sig = mix(sig, G.blotS.xyz, bm); tnt = mix(tnt, G.blotT.xyz, bm); }
+  let absorb = exp(-sig * (thick + 0.045));
   // key light reaching this surface point through any jelly in front of it (shadow-map depth)
   let Ts = softTrans(in.wp + N * 0.004, in.pos.xy);
   let Tl = dot(Ts, vec3f(0.333));
   let ndl = dot(N, L);
   // in-scattering gives the gummy body colour
-  var scat = G.tint.xyz * (G.light.w * 0.07 * Ts * max((ndl + 0.5) / 1.5, 0.0) + G.misc.z * 0.12) * (1.0 - absorb);
+  var scat = tnt * (G.light.w * 0.07 * Ts * max((ndl + 0.5) / 1.5, 0.0) + G.misc.z * 0.12) * (1.0 - absorb);
   // back-lit glow where light passes through thin parts (plates, spikes) toward the viewer
   let phase = pow(max(dot(-V, L), 0.0), 2.0) * 0.9 + 0.12;
-  let glow = G.tint.xyz * G.light.w * 1.3 * Ts * phase * (1.0 - exp(-thick * 9.0)) * smoothstep(0.25, -0.1, ndl);
+  let glow = tnt * G.light.w * 1.3 * Ts * phase * (1.0 - exp(-thick * 9.0)) * smoothstep(0.25, -0.1, ndl);
   var trans = bg * absorb + scat + glow;
   if (isDrop) {
     let stripe = 1.0 - smoothstep(0.14, 0.24, abs(in.rp.x));
@@ -1114,8 +1194,13 @@ async function buildSpecimen(){
   MESH=surfaceNets(gridVals, sdf); MILK=surfaceNets(gridMilk, sdfMilk);
   STATS.meshV=MESH.pos.length/3; STATS.meshT=MESH.idx.length/3; STATS.milkV=MILK.pos.length/3; STATS.milkT=MILK.idx.length/3;
   // eyes: march out from the head centre line to the surface
-  EYES=[]; for(const s of [-1,1]){ const [x,y,r]=sp.eye; let z=0; while(sdf(x,y,z*s)<0 && z<0.2) z+=0.002; const g=norm3(grad(sdf,x,y,z*s));
-    EYES.push({p:[x-g[0]*r*0.12,y-g[1]*r*0.12,z*s-g[2]*r*0.12], r}); }
+  EYES=[]; for(const s of [-1,1]){
+    if(Array.isArray(sp.eye)){ const [x,y,r]=sp.eye; let z=0; while(sdf(x,y,z*s)<0 && z<0.6) z+=0.002; const g=norm3(grad(sdf,x,y,z*s));
+      EYES.push({p:[x-g[0]*r*0.12,y-g[1]*r*0.12,z*s-g[2]*r*0.12], r}); }
+    else { // march from a point inside the head along a direction to the surface, then sink the bead by a fraction of its radius
+      const E=sp.eye, d=norm3([E.dir[0],E.dir[1],E.dir[2]*s]), o=[E.from[0],E.from[1],E.from[2]*s]; let t=0;
+      while(sdf(o[0]+d[0]*t,o[1]+d[1]*t,o[2]+d[2]*t)<0 && t<0.6) t+=0.002; const q=[o[0]+d[0]*t,o[1]+d[1]*t,o[2]+d[2]*t]; const g=norm3(grad(sdf,...q));
+      EYES.push({p:[q[0]-g[0]*E.r*E.sink,q[1]-g[1]*E.r*E.sink,q[2]-g[2]*E.r*E.sink], r:E.r}); } }
   // trapped air bubbles inside the clear jelly (not the milky layer)
   BUBBLES=[]; const rnd=mulberry(44); let guard=0; const B=sp.bubbles;
   while(BUBBLES.length<7 && guard++<20000){ const p=[B[0]+rnd()*B[1], B[2]+rnd()*B[3], (rnd()-0.5)*B[4]]; const d=sdf(p[0],p[1],p[2]);
@@ -1268,6 +1353,8 @@ function buildUniforms(){
   u.set([...CAM.eye,performance.now()/1000],64); u.set([...LIGHT_DIR,3.1],68); u.set([...sig,7.5],72); u.set([...C.tint,1.0],76);
   u.set([...C.milk,0.32],80); u.set([R.W,R.H,1/R.W,1/R.H],84); u.set([SHADOW_SIZE,AO_SIZE,0.62,0.33],88);
   const T=SPEC.gpuTable; u.set([SPEC.shader,SPEC.mouth[0],T[3],T[7]-T[3]],92); u.set([SPEC.mouth[1],MARK.snoutX||0,0,0],96);
+  const Bl=C.blotch; u.set([SPEC.mouthCurve||0, SPEC.pebble==null?1:SPEC.pebble, Bl?1:0, 0],100);
+  if(Bl){ u.set([...Bl.tint,0],104); u.set([...Bl.trans.map(t=>-Math.log(t)/0.13),0],108); }
   return u;
 }
 function writeUniforms(){
@@ -1334,6 +1421,7 @@ precision highp float; precision highp int; precision highp sampler2D;
 layout(std140) uniform Globals {
   mat4 viewProj; mat4 view; mat4 lightVP; mat4 aoVP;
   vec4 cam; vec4 light; vec4 sigma; vec4 tint; vec4 milk; vec4 screen; vec4 misc; vec4 spec; vec4 spec2;
+  vec4 extra; vec4 blotT; vec4 blotS;
 } G;
 layout(std140) uniform Spine { vec4 spine[64]; };
 ivec2 tc(int i) { return ivec2(i & 1023, i >> 10); }
@@ -1459,13 +1547,18 @@ vec2 reliefGeneric(vec3 p) {
   float ry = (p.y - s.x) / b; float rz = abs(p.z) / a; float h = 0.0;
   float hx0 = G.spec2.x; float snx = G.spec2.y;
   float mm = smoothstep(hx0, hx0 + 0.05, p.x);
-  float g = exp(-pow((p.y - G.spec.y) / 0.0050, 2.0)) * mm * smoothstep(0.15, 0.45, rz + smoothstep(snx - 0.06, snx, p.x));
+  float g = exp(-pow((p.y - (G.spec.y - G.extra.x * p.z * p.z)) / 0.0050, 2.0)) * mm * smoothstep(0.15, 0.45, rz + smoothstep(snx - 0.06, snx, p.x));
   h -= g * 1.5;
   float sk = (1.0 - smoothstep(hx0 - 0.10, hx0 - 0.02, p.x)) * smoothstep(0.02, 0.07, p.y) * smoothstep(0.25, 0.65, rz + max(ry, 0.0));
-  if (sk > 0.001) { float vv = voronoi(vec2(p.x * 26.0 + sign(p.z) * 3.1 + p.z * 6.0, p.y * 28.0 + p.z * 11.0)); float dome = 1.0 - smoothstep(0.0, 0.5, vv); h += sk * dome * dome * 0.32; }
+  if (sk > 0.001) { float vv = voronoi(vec2(p.x * 26.0 + sign(p.z) * 3.1 + p.z * 6.0, p.y * 28.0 + p.z * 11.0)); float dome = 1.0 - smoothstep(0.0, 0.5, vv); h += sk * dome * dome * 0.32 * G.extra.y; }
   return vec2(h, g);
 }
 vec2 relief(vec3 p) { if (G.spec.x < 0.5) { return reliefStego(p); } return reliefGeneric(p); }
+float blotch(vec3 p) {
+  vec3 q = p * vec3(9.0, 11.0, 9.0);
+  float n = sin(q.x + 2.1 * sin(q.z * 0.9 + q.y * 1.3)) * sin(q.z * 1.1 + 1.7 * sin(q.x * 0.8 - q.y)) + 0.35 * sin(q.y * 2.3 + q.x * 1.7);
+  return smoothstep(0.12, 0.32, n);
+}
 vec3 neutral(vec3 c0) {
   vec3 c = c0; float start = 0.8 - 0.04; float desat = 0.15;
   float x = min(c.r, min(c.g, c.b)); float off = x < 0.08 ? x - 6.25 * x * x : 0.04; c -= off;
@@ -1549,12 +1642,14 @@ void main() {
   float k = 0.085 * smoothstep(0.0, 0.25, thick) / max(vLin * 0.32, 0.6);
   vec2 ruv = clamp(uv + vec2(-nv.x, -nv.y) * k * vec2(G.screen.y * G.screen.z, 1.0), vec2(0.001), vec2(0.999));
   vec3 bg = dec(texture(opC, ruv).rgb);
-  vec3 absorb = exp(-G.sigma.xyz * (thick + 0.045));
+  vec3 sig = G.sigma.xyz; vec3 tnt = G.tint.xyz;
+  if (G.extra.z > 0.5 && !isDrop) { float bm = blotch(vRp); sig = mix(sig, G.blotS.xyz, bm); tnt = mix(tnt, G.blotT.xyz, bm); }
+  vec3 absorb = exp(-sig * (thick + 0.045));
   vec3 lc = lightCoord(vWp + N * 0.004); vec3 Ts = (transAt(lc.xy, lc.z) + transAt(lc.xy + vec2(1.5 / G.misc.x, 0.0), lc.z) + transAt(lc.xy - vec2(0.0, 1.5 / G.misc.x), lc.z)) / 3.0;
   float Tl = dot(Ts, vec3(0.333)); float ndl = dot(N, L);
-  vec3 scat = G.tint.xyz * (G.light.w * 0.07 * Ts * max((ndl + 0.5) / 1.5, 0.0) + G.misc.z * 0.12) * (1.0 - absorb);
+  vec3 scat = tnt * (G.light.w * 0.07 * Ts * max((ndl + 0.5) / 1.5, 0.0) + G.misc.z * 0.12) * (1.0 - absorb);
   float phase = pow(max(dot(-V, L), 0.0), 2.0) * 0.9 + 0.12;
-  vec3 glow = G.tint.xyz * G.light.w * 1.3 * Ts * phase * (1.0 - exp(-thick * 9.0)) * smoothstep(0.25, -0.1, ndl);
+  vec3 glow = tnt * G.light.w * 1.3 * Ts * phase * (1.0 - exp(-thick * 9.0)) * smoothstep(0.25, -0.1, ndl);
   vec3 trans = bg * absorb + scat + glow;
   if (isDrop) { float stripe = 1.0 - smoothstep(0.14, 0.24, abs(vRp.x)); trans = mix(trans, G.milk.xyz * (G.misc.z * 0.9 + G.light.w * 0.35 * Tl * max(ndl * 0.6 + 0.4, 0.0)), stripe * 0.75); }
   trans = mix(trans, vec3(0.035, 0.012, 0.01), clamp(dark * 0.85, 0.0, 0.9));
@@ -1801,7 +1896,7 @@ async function setSpecies(i){
   const L=$('loading'); L.textContent='Casting the '+SPECIES[i].name; L.classList.add('over'); L.hidden=false; await tick();
   try{ useSpecies(i); await buildSpecimen(); rebuildLattice(); }
   catch(err){ console.error(err); showFallback(String(err.message||err)); return; }
-  cam.target=[...SPEC.cam.target]; cam.dist=SPEC.cam.dist; cam.pitch=SPEC.cam.pitch;
+  cam.target=[...SPEC.cam.target]; cam.dist=SPEC.cam.dist; cam.pitch=SPEC.cam.pitch; if(SPEC.cam.yaw!=null) cam.yaw=SPEC.cam.yaw;
   btns.forEach((b,j)=>{ b.disabled=false; b.setAttribute('aria-pressed',j===i?'true':'false'); });
   L.hidden=true; perfChecked=false; startT=performance.now(); last=performance.now(); acc=0; busy=false;
 }
@@ -1866,11 +1961,11 @@ async function main(){
     catch(err){ console.error(err); showFallback((why?'WebGPU: '+why+'. ':'')+'WebGL2: '+String(err.message||err)); return; }
   }
   console.info(`Stego Jelly renderer: ${RND.name}${why&&RND.name==='webgl2'?' ('+why+')':''}; phone mode: ${PHONE}; lattice: ${UI.light?'light':'fine'}`);
-  cam.target=[...SPEC.cam.target]; cam.dist=SPEC.cam.dist; cam.pitch=SPEC.cam.pitch;
+  cam.target=[...SPEC.cam.target]; cam.dist=SPEC.cam.dist; cam.pitch=SPEC.cam.pitch; if(SPEC.cam.yaw!=null) cam.yaw=SPEC.cam.yaw;
   $('loading').hidden=true; startT=performance.now(); last=performance.now(); busy=false;
   requestAnimationFrame(frame);
 }
-window.__stego={ get S(){return S;}, get drops(){return drops;}, STATS, UI, sneeze, resetSim, cam, GRAB, rebuildLattice, setSpecies, setPanel, SPECIES, QUAL, get renderer(){ return RND&&RND.name; }, get substeps(){ return SUBSTEPS; }, get species(){ return SPEC.id; }, FRAME_LOG,
+window.__stego={ get S(){return S;}, get drops(){return drops;}, STATS, UI, sneeze, resetSim, cam, GRAB, rebuildLattice, setSpecies, setPanel, SPECIES, QUAL, sdf:(x,y,z)=>sdf(x,y,z), sdfMilk:(x,y,z)=>sdfMilk(x,y,z), get renderer(){ return RND&&RND.name; }, get substeps(){ return SUBSTEPS; }, get species(){ return SPEC.id; }, FRAME_LOG,
   maxDisp(){ let m=0; for(let n=0;n<S.nN;n++){ const d=Math.hypot(S.x[n*3]-S.X0[n*3],S.x[n*3+1]-S.X0[n*3+1],S.x[n*3+2]-S.X0[n*3+2]); if(d>m) m=d; } return m; },
   hasNaN(){ for(let i=0;i<S.x.length;i++) if(!Number.isFinite(S.x[i])) return true; return false; },
   maxSpeed(){ let m=0; for(let n=0;n<S.nN;n++){ m=Math.max(m,Math.hypot(S.v[n*3],S.v[n*3+1],S.v[n*3+2])); } return m; },
